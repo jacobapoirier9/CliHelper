@@ -19,10 +19,10 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build --configuration Release --no-restore -o .
+        run: dotnet build --configuration Release --no-restore -o "./bin"
       - name: Test
         run: dotnet test --no-restore --verbosity normal
       - name: Publish
-        run: dotnet nuget push "*.nupkg" --api-key "%NUGET_GETY%" --source "github"
+        run: dotnet nuget push "./bin/*.nupkg" --api-key "%NUGET_GETY%" --source "github"
         env:
           NUGET_KEY: ${{ secrets.NUGET_API_KEY }}
