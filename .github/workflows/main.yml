@@ -23,7 +23,9 @@ jobs:
       - name: Test
         run: dotnet test --no-restore --verbosity normal
       - name: Publish
+        run: dotnet publish --api-key "%NUGET_KEY%"
         uses: brandedoutcast/publish-nuget@v2.5.2
         with:
           PROJECT_FILE_PATH: CliHelper/CliHelper.csproj
-          NUGET_KEY: ${{secrets.NUGET_API_KEY}}
+        env:
+          NUGET_KEY: ${{ secrets.NUGET_API_KEY }}
