@@ -22,5 +22,7 @@ jobs:
         run: dotnet build --configuration Release --no-restore -o ./bin
       - name: Dotnet Test
         run: dotnet test --no-build --no-restore
+      - name: View Files
+        run: dir /s /b .
       - name: Dotnet Publish
         run: dotnet nuget push ./bin/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://nuget.pkg.github.com/jacobapoirier9/index.json --no-service-endpoint
