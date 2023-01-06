@@ -7,7 +7,7 @@ on:
     branches: [ master ]
     
 jobs:
-  Build & Publish CliHelper:
+  Job:
     runs-on: windows-latest
     
     steps:
