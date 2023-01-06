@@ -23,8 +23,4 @@ jobs:
       - name: Dotnet Test
         run: dotnet test --no-restore --verbosity normal
       - name: Dotnet Publish
-        shell: cmd
-        env:
-          NUGET_KEY: ${{ secrets.NUGET_API_KEY }}
-          NUGET_URL: https://nuget.pkg.github.com/jacobapoirier9/index.json
-        run: dotnet nuget push "./bin/*.nupkg" --api-key %NUGET_GETY% --source %NUGET_URL% --no-service-endpoint
+        run: dotnet nuget push "./bin/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://nuget.pkg.github.com/jacobapoirier9/index.json --no-service-endpoint
