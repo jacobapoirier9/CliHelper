@@ -20,13 +20,10 @@ jobs:
         run: dotnet restore
       - name: Dotnet Build
         run: dotnet build --configuration Release --no-restore -o ./bin
-      - name: View Files
-        run: dir /s /b .
-        shell: cmd
       - name: Dotnet Test
         run: dotnet test -o ./bin --no-build --no-restore
       - name: View Files
-        run: dir /s /b .
+        run: dir /s /b *.nupkg
         shell: cmd
       - name: Dotnet Publish
         run: dotnet nuget push "./bin/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://nuget.pkg.github.com/jacobapoirier9/index.json --no-service-endpoint
