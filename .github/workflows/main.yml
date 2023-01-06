@@ -7,22 +7,23 @@ on:
     branches: [ master ]
     
 jobs:
-  build:
+  Build & Publish CliHelper:
     runs-on: windows-latest
     
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Install .NET 6
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 6.0.401
-      - name: Install dependencies
+      - name: Dotnet Restore
         run: dotnet restore
-      - name: Build
+      - name: Dotnet Build
         run: dotnet build --configuration Release --no-restore -o "./bin"
-      - name: Test
+      - name: Dotnet Test
         run: dotnet test --no-restore --verbosity normal
-      - name: Publish
+      - name: Dotnet Publish
+        shell: cmd
         env:
           NUGET_KEY: ${{ secrets.NUGET_API_KEY }}
           NUGET_URL: https://nuget.pkg.github.com/jacobapoirier9/index.json
