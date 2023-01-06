@@ -24,7 +24,7 @@ jobs:
         run: dir /s /b .
         shell: cmd
       - name: Dotnet Test
-        run: dotnet test --no-build --no-restore
+        run: dotnet test -o ./bin --no-build --no-restore
       - name: View Files
         run: dir /s /b .
         shell: cmd
