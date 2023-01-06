@@ -27,4 +27,4 @@ jobs:
         shell: cmd
       - name: Dotnet Publish
         working-directory: ./bin
-        run: dotnet nuget push *.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://nuget.pkg.github.com/jacobapoirier9/index.json --no-service-endpoint
+        run: dotnet nuget push *.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://nuget.pkg.github.com/jacobapoirier9/index.json --no-service-endpoint --skip-duplicate
