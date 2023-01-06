@@ -19,8 +19,8 @@ jobs:
       - name: Dotnet Restore
         run: dotnet restore
       - name: Dotnet Build
-        run: dotnet build --configuration Release --no-restore -o "./bin"
+        run: dotnet build --configuration Release --no-restore -o ./bin
       - name: Dotnet Test
-        run: dotnet test --no-restore
+        run: dotnet test ./bin/*test*.dll --no-restore
       - name: Dotnet Publish
-        run: dotnet nuget push "./bin/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://nuget.pkg.github.com/jacobapoirier9/index.json --no-service-endpoint
+        run: dotnet nuget push ./bin/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://nuget.pkg.github.com/jacobapoirier9/index.json --no-service-endpoint
