@@ -20,6 +20,8 @@ jobs:
         run: dotnet restore
       - name: Dotnet Build
         run: dotnet build --configuration Release --no-restore -o ./bin
+      - name: View Files
+        run: dir /s /b .
       - name: Dotnet Test
         run: dotnet test --no-build --no-restore
       - name: View Files
