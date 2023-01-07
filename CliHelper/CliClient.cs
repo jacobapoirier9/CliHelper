@@ -101,10 +101,7 @@ public sealed class CliClient
             (controllerType.GetCustomAttribute<CliAttribute>()?.Alias ?? controllerType.Name)
             .Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty);
 
-        // FLAW: This will load all CliControllers from the assembly and then filter down to the specified one.
-        _executeCliContexts = AssemblyHelper.FindCliActions(controllerType.Assembly)
-            .Where(a => a.ControllerType == controllerType)
-            .ToList();
+        _executeCliContexts = AssemblyHelper.FindCliActions(controllerType);
 
         _serviceCollection.TryAddTransient(controllerType);
 
