@@ -34,6 +34,15 @@ public sealed class CliClient
         return controllerReference;
     }
 
+    private string ResolveActionReference(CliExecutionContext executionContext)
+    {
+        var actionReference =
+            executionContext.ActionAttribute?.Alias
+            ?? executionContext.ActionMethod.Name;
+
+        return actionReference;
+    }
+
     private CliExecutionContext GetCliExecutionContext(CliArguments cliArguments)
     {
         var filteredByController = _cliExecutionContexts
@@ -48,7 +57,10 @@ public sealed class CliClient
             throw new ApplicationException($"Could not find a matching controller for {cliArguments.CliController}");
 
         var filteredByAction = filteredByController
-             .Where(ctx => string.Equals(ctx.ActionAttribute?.Alias ?? ctx.ActionMethod.Name, cliArguments.CliAction, StringComparison.OrdinalIgnoreCase))
+             .Where(ctx => string.Equals(
+                 ResolveActionReference(ctx), 
+                 cliArguments.CliAction, 
+                 StringComparison.OrdinalIgnoreCase))
              .ToList();
 
         if (!filteredByAction.Any())
