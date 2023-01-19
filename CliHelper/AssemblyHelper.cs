@@ -13,24 +13,33 @@ internal static class AssemblyHelper
 
         foreach (var controllerType in controllerTypes)
         {
-            var controllerAttribute = controllerType.GetCustomAttribute<CliAttribute>();
+            cliControllerActionWrappers.AddRange(FindCliActions(controllerType));
+        }
 
-            var actionMethods = controllerType.GetMethods()
-                .Where(m => m.IsPublic && m.DeclaringType == controllerType)
-                .ToList();
+        return cliControllerActionWrappers;
+    }
 
-            foreach (var actionMethod in actionMethods)
+    internal static List<CliExecutionContext> FindCliActions(Type controllerType)
+    {
+        var cliControllerActionWrappers = new List<CliExecutionContext>();
+
+        var controllerAttribute = controllerType.GetCustomAttribute<CliAttribute>();
+
+        var actionMethods = controllerType.GetMethods()
+            .Where(m => m.IsPublic && m.DeclaringType == controllerType)
+            .ToList();
+
+        foreach (var actionMethod in actionMethods)
+        {
+            var actionAttribute = actionMethod.GetCustomAttribute<CliAttribute>();
+
+            cliControllerActionWrappers.Add(new CliExecutionContext
             {
-                var actionAttribute = actionMethod.GetCustomAttribute<CliAttribute>();
-
-                cliControllerActionWrappers.Add(new CliExecutionContext
-                {
-                    ControllerType = controllerType,
-                    ControllerAttribute = controllerAttribute,
-                    ActionMethod = actionMethod,
-                    ActionAttribute = actionAttribute
-                });
-            }
+                ControllerType = controllerType,
+                ControllerAttribute = controllerAttribute,
+                ActionMethod = actionMethod,
+                ActionAttribute = actionAttribute
+            });
         }
 
         return cliControllerActionWrappers;

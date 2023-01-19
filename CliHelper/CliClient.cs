@@ -9,7 +9,7 @@ public sealed class CliClient
     /// <summary>
     /// The core collection of controller/actions that have been registered.
     /// </summary>
-    private List<CliExecutionContext> _executeCliContexts;
+    private List<CliExecutionContext> _cliExecutionContexts;
 
     private IServiceCollection _serviceCollection;
     private IServiceProvider _serviceProvider;
@@ -21,16 +21,34 @@ public sealed class CliClient
 
     private CliClient()
     {
-        _executeCliContexts = new List<CliExecutionContext>();
+        _cliExecutionContexts = new List<CliExecutionContext>();
         _serviceCollection = new ServiceCollection();
+    }
+
+    private string ResolveControllerReference(CliExecutionContext executionContext)
+    {
+        var controllerReference = 
+            executionContext.ControllerAttribute?.Alias 
+            ?? executionContext.ControllerType.Name.Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty);
+
+        return controllerReference;
+    }
+
+    private string ResolveActionReference(CliExecutionContext executionContext)
+    {
+        var actionReference =
+            executionContext.ActionAttribute?.Alias
+            ?? executionContext.ActionMethod.Name;
+
+        return actionReference;
     }
 
     private CliExecutionContext GetCliExecutionContext(CliArguments cliArguments)
     {
-        var filteredByController = _executeCliContexts
+        var filteredByController = _cliExecutionContexts
             //.Where(ctx => (ctx.ControllerAttribute?.Alias ?? ctx.ControllerType.Name).StartsWith(cliArguments.CliController, StringComparison.OrdinalIgnoreCase))
             .Where(ctx => string.Equals(
-                ctx.ControllerAttribute?.Alias ?? ctx.ControllerType.Name.Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty), 
+                ResolveControllerReference(ctx), 
                 cliArguments.CliController, 
                 StringComparison.OrdinalIgnoreCase))
             .ToList();
@@ -39,7 +57,10 @@ public sealed class CliClient
             throw new ApplicationException($"Could not find a matching controller for {cliArguments.CliController}");
 
         var filteredByAction = filteredByController
-             .Where(ctx => string.Equals(ctx.ActionAttribute?.Alias ?? ctx.ActionMethod.Name, cliArguments.CliAction, StringComparison.OrdinalIgnoreCase))
+             .Where(ctx => string.Equals(
+                 ResolveActionReference(ctx), 
+                 cliArguments.CliAction, 
+                 StringComparison.OrdinalIgnoreCase))
              .ToList();
 
         if (!filteredByAction.Any())
@@ -66,8 +87,8 @@ public sealed class CliClient
         if (_primaryControllerOverride is not null)
             throw new ControllerAlreadyAddedException($"A primary controller has already been registered using {nameof(AddPrimaryController)}. Please remove call to {nameof(AddPrimaryController)} to use {nameof(AddControllers)}");
 
-        _executeCliContexts = AssemblyHelper.FindCliActions(assembly);
-        foreach (var action in _executeCliContexts)
+        _cliExecutionContexts = AssemblyHelper.FindCliActions(assembly);
+        foreach (var action in _cliExecutionContexts)
         {
             // Each controller may attempt to be added more than once so we want to use TryAddTransient here.
             _serviceCollection.TryAddTransient(action.ControllerType);
@@ -83,9 +104,9 @@ public sealed class CliClient
     public CliClient AddPrimaryController(Type controllerType)
     {
         // If controllers have been added, the user should not be able to set a primary controller.
-        if (_executeCliContexts.Count > 0)
+        if (_cliExecutionContexts.Count > 0)
         {
-            var controllerCount = _executeCliContexts
+            var controllerCount = _cliExecutionContexts
                 .Select(a => a.ControllerType)
                 .Distinct()
                 .Count();
@@ -97,14 +118,10 @@ public sealed class CliClient
         if (!controllerType.IsSubclassOf(typeof(CliController)))
             throw new NotImplementedException($"Controller {controllerType.Name} must implement {typeof(CliController)}");
 
-        _primaryControllerOverride = 
-            (controllerType.GetCustomAttribute<CliAttribute>()?.Alias ?? controllerType.Name)
-            .Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty);
+        _cliExecutionContexts = AssemblyHelper.FindCliActions(controllerType);
 
-        // FLAW: This will load all CliControllers from the assembly and then filter down to the specified one.
-        _executeCliContexts = AssemblyHelper.FindCliActions(controllerType.Assembly)
-            .Where(a => a.ControllerType == controllerType)
-            .ToList();
+        var executionContext = _cliExecutionContexts.First() ;// TODO: Should we do a null check here to make sure at least one action is added?
+        _primaryControllerOverride = ResolveControllerReference(executionContext);
 
         _serviceCollection.TryAddTransient(controllerType);
 
