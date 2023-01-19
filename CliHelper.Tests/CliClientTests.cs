@@ -71,7 +71,7 @@ public class CliClientTests
     [Fact]
     public void CreateCliClient_CannotAddControllersIfPrimaryControllerHasAlreadyBeenAdded()
     {
-        Assert.Throws<ControllerAlreadyAddedException>(() =>
+        Assert.Throws<ControllerException>(() =>
         {
             var client = CliClient.Create()
                 .AddControllers(typeof(CliClientTests).Assembly)
@@ -82,7 +82,7 @@ public class CliClientTests
     [Fact]
     public void CreateCliClient_CannotAddPrimaryControllerIfControllersHaveAleadyBeenAdded()
     {
-        Assert.Throws<ControllerAlreadyAddedException>(() =>
+        Assert.Throws<ControllerException>(() =>
         {
             var client = CliClient.Create()
                 .AddPrimaryController(typeof(BasicAliasController))

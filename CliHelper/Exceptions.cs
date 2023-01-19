@@ -1,4 +1,4 @@
-﻿public class ControllerAlreadyAddedException : Exception
+﻿public class ControllerException : Exception
 {
-    public ControllerAlreadyAddedException(string message) : base(message) { }
+    public ControllerException(string message) : base(message) { }
 }

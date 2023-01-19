@@ -6,10 +6,10 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { "index" };
+        args = new string[] { "advanced", "index" };
 
         var client = CliClient.Create()
-            .AddPrimaryController(typeof(AdvancedController))
+            .AddControllers()
             .AddServices(services =>
             {
             })
