@@ -14,7 +14,7 @@ public class CliClientTests
         var args = new string[] { "basicnoalias", "indextwo" };
 
         var client = CliClient.Create()
-            .AddControllers();
+            .AddControllers(typeof(BasicNoAliasController));
 
         var response = client.Run<string>(args);
         Assert.Equal(nameof(BasicNoAliasController.IndexTwo), response);
@@ -38,7 +38,7 @@ public class CliClientTests
         var args = new string[] { "basic", "index-one" };
 
         var client = CliClient.Create()
-            .AddControllers();
+            .AddControllers(typeof(BasicAliasController));
 
         var response = client.Run<string>(args);
         Assert.Equal(nameof(BasicAliasController.IndexOne), response);
@@ -62,7 +62,7 @@ public class CliClientTests
         var args = new string[] { "dependency-injection", "constructor" };
 
         var client = CliClient.Create()
-            .AddControllers()
+            .AddControllers(typeof(DependencyInjectionController))
             .AddServices(services =>
             {
                 services.AddTransient<ITestService, TestService>();
@@ -78,7 +78,7 @@ public class CliClientTests
         var args = new string[] { "dependency-injection", "parameter" };
 
         var client = CliClient.Create()
-            .AddControllers()
+            .AddControllers(typeof(DependencyInjectionController))
             .AddServices(services =>
             {
                 services.AddTransient<ITestService, TestService>();
@@ -108,7 +108,7 @@ public class CliClientTests
     [Fact]
     public void CreateCliClient_MustImplementCliController()
     {
-        Assert.Throws<NotImplementedException>(() =>
+        Assert.Throws<ControllerException>(() =>
         {
             var client = CliClient.Create()
                 .AddPrimaryController(typeof(BasicNotImplementedController));
@@ -134,6 +134,16 @@ public class CliClientTests
             var client = CliClient.Create()
                 .AddPrimaryController(typeof(BasicAliasController))
                 .AddControllers(typeof(CliClientTests).Assembly);
+        });
+    }
+
+    [Fact]
+    public void CreateCliClient_ControllerMustHaveAtLeastOneActionMethod()
+    {
+        Assert.Throws<ControllerException>(() =>
+        {
+            var client = CliClient.Create()
+                .AddPrimaryController(typeof(DuplicateActionController));
         });
     }
     #endregion

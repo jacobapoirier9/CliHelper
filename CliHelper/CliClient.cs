@@ -1,6 +1,7 @@
 ﻿using CliHelper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -58,29 +59,52 @@ public sealed class CliClient
     private void RegisterController(Type controllerType)
     {
         if (!controllerType.IsSubclassOf(typeof(CliController)))
-            throw new NotImplementedException($"Controller {controllerType.Name} must implement {typeof(CliController)}");
-
-        _serviceCollection.AddTransient(controllerType);
+            throw new ControllerException($"{controllerType.Name} must inherit from parent class {typeof(CliController)}");
 
         var controller = new ControllerContext
         {
             ControllerType = controllerType,
             ControllerAttribute = controllerType.GetCustomAttribute<CliAttribute>(),
-            Actions = controllerType.GetMethods()
-                .Where(m => m.IsPublic && m.DeclaringType == controllerType)
-                .Select(methodInfo => new ActionContext
-                {
-                    ActionMethod = methodInfo,
-                    ActionAttribute = methodInfo.GetCustomAttribute<CliAttribute>(),
-                    Parameters = methodInfo.GetParameters().Select(p => new ParameterContext
-                    {
-                        ActionParameter = p,
-                        ActionParameterAttribute = p.GetCustomAttribute<CliAttribute>()
-                    }).ToList()
-                }).ToList()
+            Actions = new List<ActionContext>()
         };
 
+        var actionMethods = controllerType.GetMethods()
+            .Where(m => m.IsPublic && m.DeclaringType == controllerType)
+            .ToList();
+
+        if (!actionMethods.Any())
+            throw new ControllerException($"{controllerType.Name} has no public executable action methods");
+
+        foreach (var actionMethod in actionMethods)
+        {
+            var action = new ActionContext
+            {
+                ActionMethod = actionMethod,
+                ActionAttribute = actionMethod.GetCustomAttribute<CliAttribute>(),
+                Parameters = new List<ParameterContext>()
+            };
+
+            if (controller.Actions.Any(a => string.Equals(ResolveActionReference(a), ResolveActionReference(action), StringComparison.OrdinalIgnoreCase)))
+                throw new ControllerException($"{ResolveActionReference(action)} cannot be specified more than once");
+
+            var actionParameters = actionMethod.GetParameters();
+            foreach (var actionParamter in actionParameters)
+            {
+                var parameter = new ParameterContext
+                {
+                    ActionParameter = actionParamter,
+                    ActionParameterAttribute = actionParamter.GetCustomAttribute<CliAttribute>()
+                };
+
+                action.Parameters.Add(parameter);
+            }
+
+            controller.Actions.Add(action);
+        }
+
         _controllers.Add(controller);
+
+        _serviceCollection.AddTransient(controllerType);
     }
 
     /// <summary>
@@ -95,6 +119,16 @@ public sealed class CliClient
             throw new ControllerException($"A primary controller has already been registered using {nameof(AddPrimaryController)}. Please remove call to {nameof(AddPrimaryController)} to use {nameof(AddControllers)}");
 
         RegisterAssembly(assembly);
+
+        return this;
+    }
+
+    public CliClient AddControllers(params Type[] controllerTypes)
+    {
+        foreach (var controllerType in controllerTypes)
+        {
+            RegisterController(controllerType);
+        }
 
         return this;
     }

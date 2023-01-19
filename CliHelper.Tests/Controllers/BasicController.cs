@@ -48,11 +48,25 @@ public class DependencyInjectionController : CliController
     }
 }
 
-public class SimpleParametersController
+public class SimpleParametersController : CliController
 {
     [Cli("as-int")]
     public string MethodWithInt(int number)
     {
         return number.ToString();
     }
+}
+
+public class NoActionController : CliController
+{
+
+}
+
+public class DuplicateActionController : CliController
+{
+    [Cli("same-name")]
+    public void MethodOne() { }
+
+    [Cli("same-name")]
+    public void MethodTwo() { }
 }
