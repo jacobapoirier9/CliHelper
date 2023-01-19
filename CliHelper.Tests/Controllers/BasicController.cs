@@ -1,4 +1,5 @@
 ﻿using CliHelper.Tests.Services;
+using System.Reflection;
 
 namespace CliHelper.Tests.Controllers;
 
@@ -44,5 +45,14 @@ public class DependencyInjectionController : CliController
     public string ReadFromParameter(ITestService testService)
     {
         return testService.GetResponse();
+    }
+}
+
+public class SimpleParametersController
+{
+    [Cli("as-int")]
+    public string MethodWithInt(int number)
+    {
+        return number.ToString();
     }
 }

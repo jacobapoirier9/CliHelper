@@ -7,7 +7,7 @@ namespace CliHelper.Tests;
 
 public class CliClientTests
 {
-    #region Controller/Action Selection
+    #region Controller/Action Execution Tests
     [Fact]
     public void ExecuteAction_NotAliased_NoParameters_MultipleControllers()
     {
@@ -55,9 +55,56 @@ public class CliClientTests
         var response = client.Run<string>(args);
         Assert.Equal(nameof(BasicAliasController.IndexOne), response);
     }
+
+    [Fact]
+    public void ExecuteAction_DependencyInjection_Constructor()
+    {
+        var args = new string[] { "dependency-injection", "constructor" };
+
+        var client = CliClient.Create()
+            .AddControllers()
+            .AddServices(services =>
+            {
+                services.AddTransient<ITestService, TestService>();
+            });
+
+        var response = client.Run<string>(args);
+        Assert.Equal(TestService.Response, response);
+    }
+
+    [Fact]
+    public void ExecuteAction_DependencyInjection_Method()
+    {
+        var args = new string[] { "dependency-injection", "parameter" };
+
+        var client = CliClient.Create()
+            .AddControllers()
+            .AddServices(services =>
+            {
+                services.AddTransient<ITestService, TestService>();
+            });
+
+        var response = client.Run<string>(args);
+        Assert.Equal(TestService.Response, response);
+    }
+
+    [Fact]
+    public void ExecuteAction_SimpleParameters_Method_Int()
+    {
+        var args = new string[] { "as-int", "4" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(SimpleParametersController))
+            .AddServices(services =>
+            {
+            });
+
+        var response = client.Run<string>(args);
+        Assert.Equal("4", response);
+    }
     #endregion
 
-    #region Create CliClient Tests
+    #region Controller Registration Tests
     [Fact]
     public void CreateCliClient_MustImplementCliController()
     {
@@ -88,38 +135,6 @@ public class CliClientTests
                 .AddPrimaryController(typeof(BasicAliasController))
                 .AddControllers(typeof(CliClientTests).Assembly);
         });
-    }
-
-    [Fact]
-    public void CreateCliClient_InjectsToConstructor()
-    {
-        var args = new string[] { "dependency-injection", "constructor" };
-
-        var client = CliClient.Create()
-            .AddControllers()
-            .AddServices(services =>
-            {
-                services.AddTransient<ITestService, TestService>();
-            });
-
-        var response = client.Run<string>(args);
-        Assert.Equal(TestService.Response, response);
-    }
-
-    [Fact]
-    public void CreateCliClient_InjectsToParameter()
-    {
-        var args = new string[] { "dependency-injection", "parameter" };
-
-        var client = CliClient.Create()
-            .AddControllers()
-            .AddServices(services =>
-            {
-                services.AddTransient<ITestService, TestService>();
-            });
-
-        var response = client.Run<string>(args);
-        Assert.Equal(TestService.Response, response);
     }
     #endregion
 }
