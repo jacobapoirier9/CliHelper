@@ -73,6 +73,48 @@ public sealed class CliClient
         var executionContext = filteredByAction.Single();
         return executionContext;
     }
+    
+    private void RegisterAssembly(Assembly controllersAssembly)
+    {
+        var cliControllerActionWrappers = new List<CliExecutionContext>();
+
+        var controllerTypes = controllersAssembly.GetTypes()
+            .Where(t => t.IsSubclassOf(typeof(CliController)))
+            .ToList();
+
+        foreach (var controllerType in controllerTypes)
+        {
+            RegisterController(controllerType);
+        }
+    }
+
+    private void RegisterController(Type controllerType)
+    {
+        // Controllers must inherit CliController. This is the flag for controllers and common functionality for controllers could be added in the future similar to MVC.
+        if (!controllerType.IsSubclassOf(typeof(CliController)))
+            throw new NotImplementedException($"Controller {controllerType.Name} must implement {typeof(CliController)}");
+
+        var controllerAttribute = controllerType.GetCustomAttribute<CliAttribute>();
+
+        var actionMethods = controllerType.GetMethods()
+            .Where(m => m.IsPublic && m.DeclaringType == controllerType)
+            .ToList();
+
+        foreach (var actionMethod in actionMethods)
+        {
+            var actionAttribute = actionMethod.GetCustomAttribute<CliAttribute>();
+
+            _cliExecutionContexts.Add(new CliExecutionContext
+            {
+                ControllerType = controllerType,
+                ControllerAttribute = controllerAttribute,
+                ActionMethod = actionMethod,
+                ActionAttribute = actionAttribute
+            });
+        }
+
+        _serviceCollection.AddTransient(controllerType);
+    }
 
     /// <summary>
     /// Searches the assembly for child classes of type <see cref="CliController"/> and adds them to the controller/action collection.
@@ -87,12 +129,7 @@ public sealed class CliClient
         if (_primaryControllerOverride is not null)
             throw new ControllerAlreadyAddedException($"A primary controller has already been registered using {nameof(AddPrimaryController)}. Please remove call to {nameof(AddPrimaryController)} to use {nameof(AddControllers)}");
 
-        _cliExecutionContexts = AssemblyHelper.FindCliActions(assembly);
-        foreach (var action in _cliExecutionContexts)
-        {
-            // Each controller may attempt to be added more than once so we want to use TryAddTransient here.
-            _serviceCollection.TryAddTransient(action.ControllerType);
-        }
+        RegisterAssembly(assembly);
 
         return this;
     }
@@ -114,11 +151,8 @@ public sealed class CliClient
             throw new ControllerAlreadyAddedException($"{controllerCount} controllers have already been registerd using {nameof(AddControllers)}. Please remove call to {nameof(AddControllers)} to use {nameof(AddPrimaryController)}.");
         }
 
-        // Controllers must inherit CliController. This is the flag for controllers and common functionality for controllers could be added in the future similar to MVC.
-        if (!controllerType.IsSubclassOf(typeof(CliController)))
-            throw new NotImplementedException($"Controller {controllerType.Name} must implement {typeof(CliController)}");
 
-        _cliExecutionContexts = AssemblyHelper.FindCliActions(controllerType);
+        RegisterController(controllerType);
 
         var executionContext = _cliExecutionContexts.First() ;// TODO: Should we do a null check here to make sure at least one action is added?
         _primaryControllerOverride = ResolveControllerReference(executionContext);

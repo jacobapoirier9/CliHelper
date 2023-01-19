@@ -1,6 +1,7 @@
 ﻿using CliHelper;
 using System.Reflection;
 
+[Obsolete]
 internal static class AssemblyHelper
 {
     internal static List<CliExecutionContext> FindCliActions(Assembly assembly)
