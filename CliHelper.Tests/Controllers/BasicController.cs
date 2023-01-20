@@ -5,7 +5,7 @@ using System.Reflection;
 namespace CliHelper.Tests.Controllers;
 
 [Cli("basic")]
-public class BasicAliasController : CliController
+public class BasicAliasController : Controller
 {
     [Cli("index-one")]
     public string IndexOne() => nameof(IndexOne);
@@ -14,7 +14,7 @@ public class BasicAliasController : CliController
     public string IndexTwo() => nameof(IndexTwo);
 }
 
-public class BasicNoAliasController : CliController
+public class BasicNoAliasController : Controller
 {
     [Cli("index-one")]
     public string IndexOne() => nameof(IndexOne);
@@ -28,7 +28,7 @@ public class BasicNotImplementedController
 }
 
 [Cli("dependency-injection")]
-public class DependencyInjectionController : CliController
+public class DependencyInjectionController : Controller
 {
     private readonly ITestService _testService;
     public DependencyInjectionController(ITestService testService)
@@ -49,7 +49,7 @@ public class DependencyInjectionController : CliController
     }
 }
 
-public class SimpleParametersController : CliController
+public class SimpleParametersController : Controller
 {
     [Cli("as-int")]
     public string MethodWithInt(int number)
@@ -95,12 +95,12 @@ public class SimpleParametersController : CliController
     }
 }
 
-public class NoActionController : CliController
+public class NoActionController : Controller
 {
 
 }
 
-public class DuplicateActionController : CliController
+public class DuplicateActionController : Controller
 {
     [Cli("same-name")]
     public void MethodOne() { }
@@ -109,7 +109,7 @@ public class DuplicateActionController : CliController
     public void MethodTwo() { }
 }
 
-public class SimpleAndComplexController : CliController
+public class SimpleAndComplexController : Controller
 {
     public class Request
     {
@@ -120,7 +120,7 @@ public class SimpleAndComplexController : CliController
 }
 
 [Cli("complex")]
-public class ComplexParameterController : CliController
+public class ComplexParameterController : Controller
 {
     public class Person
     {

@@ -19,7 +19,7 @@ internal static class Program
 }
 
 [Cli("advanced")]
-public class AdvancedController : CliController
+public class AdvancedController : Controller
 {
     [Cli("index")]
     public void Index(int age, string name)

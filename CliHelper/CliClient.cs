@@ -44,7 +44,7 @@ public sealed class CliClient
     {
         var controllerReference =
             controller.ControllerAttribute?.Alias
-            ?? controller.ControllerType.Name.Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty);
+            ?? controller.ControllerType.Name.Replace(nameof(Controller), string.Empty).Replace("Controller", string.Empty);
 
         return controllerReference;
     }
@@ -79,7 +79,7 @@ public sealed class CliClient
     private void RegisterAssembly(Assembly controllersAssembly)
     {
         var controllerTypes = controllersAssembly.GetTypes()
-            .Where(t => t.IsSubclassOf(typeof(CliController)))
+            .Where(t => t.IsSubclassOf(typeof(Controller)))
             .ToList();
 
         foreach (var controllerType in controllerTypes)
@@ -90,8 +90,8 @@ public sealed class CliClient
 
     private void RegisterController(Type controllerType)
     {
-        if (!controllerType.IsSubclassOf(typeof(CliController)))
-            throw new ControllerException($"{controllerType.Name} must inherit from parent class {typeof(CliController)}");
+        if (!controllerType.IsSubclassOf(typeof(Controller)))
+            throw new ControllerException($"{controllerType.Name} must inherit from parent class {typeof(Controller)}");
 
         var controller = new ControllerContext
         {
@@ -143,7 +143,7 @@ public sealed class CliClient
     }
 
     /// <summary>
-    /// Searches the assembly for child classes of type <see cref="CliController"/> and adds them to the controller/action collection.
+    /// Searches the assembly for child classes of type <see cref="Controller"/> and adds them to the controller/action collection.
     /// </summary>
     public CliClient AddControllers(Assembly assembly = null)
     {
