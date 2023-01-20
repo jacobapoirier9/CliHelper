@@ -146,5 +146,15 @@ public class CliClientTests
                 .AddPrimaryController(typeof(DuplicateActionController));
         });
     }
+
+    [Fact]
+    public void CreateCliClient_ControllerActionMustBeAllSimpleTypesOrOneComplexType()
+    {
+        Assert.Throws<ControllerException>(() =>
+        {
+            var client = CliClient.Create()
+                .AddPrimaryController(typeof(SimpleAndComplexController));
+        });
+    }
     #endregion
 }

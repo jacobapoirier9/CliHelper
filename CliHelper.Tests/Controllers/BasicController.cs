@@ -70,3 +70,13 @@ public class DuplicateActionController : CliController
     [Cli("same-name")]
     public void MethodTwo() { }
 }
+
+public class SimpleAndComplexController : CliController
+{
+    public class Request
+    {
+
+    }
+
+    public void Index(Request request, string name) { }
+}

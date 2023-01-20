@@ -5,6 +5,20 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
+internal static class Configuration
+{
+    public static readonly Type[] SimpleTypes = new Type[]
+    {
+        typeof(string),
+
+        typeof(bool), typeof(char), typeof(DateTime), typeof(TimeSpan),
+        typeof(bool?), typeof(char?), typeof(DateTime?), typeof(TimeSpan?),
+
+        typeof(byte), typeof(short), typeof(int), typeof(long), typeof(float), typeof(double), typeof(decimal),
+        typeof(byte?), typeof(short?), typeof(int?), typeof(long?), typeof(float?), typeof(double?), typeof(decimal?),
+    };
+}
+
 public sealed class CliClient
 {
     /// <summary>
@@ -28,8 +42,8 @@ public sealed class CliClient
 
     private string ResolveControllerReference(ControllerContext controller)
     {
-        var controllerReference = 
-            controller.ControllerAttribute?.Alias 
+        var controllerReference =
+            controller.ControllerAttribute?.Alias
             ?? controller.ControllerType.Name.Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty);
 
         return controllerReference;
@@ -43,7 +57,7 @@ public sealed class CliClient
 
         return actionReference;
     }
-    
+
     private void RegisterAssembly(Assembly controllersAssembly)
     {
         var controllerTypes = controllersAssembly.GetTypes()
@@ -87,7 +101,10 @@ public sealed class CliClient
             if (controller.Actions.Any(a => string.Equals(ResolveActionReference(a), ResolveActionReference(action), StringComparison.OrdinalIgnoreCase)))
                 throw new ControllerException($"{ResolveActionReference(action)} cannot be specified more than once");
 
-            var actionParameters = actionMethod.GetParameters();
+            var actionParameters = actionMethod.GetParameters().ToList();
+            if (actionParameters.Count > 1 && !actionParameters.All(ap => Configuration.SimpleTypes.Contains(ap.ParameterType)))
+                throw new ControllerException($"Parameter list must either be simple types or one strong type");
+
             foreach (var actionParamter in actionParameters)
             {
                 var parameter = new ParameterContext

@@ -26,4 +26,24 @@ public class AdvancedController : CliController
     {
         Console.WriteLine("Here!");
     }
+
+    public void AllowComplex(Test request)
+    {
+
+    }
+
+    public void AllowSimple(string name, int age)
+    {
+
+    }
+
+    public void DisallowBoth(Test request, string name, int age)
+    {
+
+    }
+}
+
+public class Test
+{
+    public string Name { get; set; }
 }
