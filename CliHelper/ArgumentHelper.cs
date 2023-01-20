@@ -10,11 +10,6 @@ internal static class ArgumentHelper
         { typeof(bool), typeof(byte), typeof(short), typeof(int), typeof(long), typeof(float), typeof(double), typeof(decimal)};
 
     /// <summary>
-    /// Converts <paramref name="stringValue"/> into the specified <see cref="T"/>
-    /// </summary>
-    internal static T GetConvertedValue<T>(string stringValue) => (T)ConvertValue(typeof(T), stringValue);
-
-    /// <summary>
     /// Converts <paramref name="stringValue"/> into the specified <paramref name="targetType"/>
     /// </summary>
     internal static object ConvertValue(Type targetType, string stringValue)
@@ -68,52 +63,6 @@ internal static class ArgumentHelper
 
         throw new FormatException($"Could not convert {stringValue} to {targetType.FullName}");
     }
-
-    /// <summary>
-    /// Parses li <see cref="string[]"/> into li <see cref="CliArguments"/> to be processed by the <see cref="CliClient"/>.
-    /// </summary>
-    internal static CliArguments ParseCliArguments(string[] args)
-    {
-        var targetCliController = args.ElementAtOrDefault(0);
-        if (targetCliController is null)
-            throw new NullReferenceException("You must specify a controller");
-
-        var targetCliAction = args.ElementAtOrDefault(1);
-        if (targetCliAction is null)
-            throw new NullReferenceException("You must specify a controller action");
-
-        var remainingArgs = new List<string>();
-        for (var i = 2; i < args.Length; i++)
-        {
-            remainingArgs.Add(args[i]);
-        }
-
-        return new CliArguments
-        {
-            CliController = targetCliController,
-            CliAction = targetCliAction,
-            RemainingArgs = remainingArgs.ToArray()
-        };
-    }
-
-    /// <summary>
-    /// Inserts the default controller reference to args[0].
-    /// </summary>
-    internal static string[] InsertController(string[] args, string controller)
-    {
-        var newArgs = new string[args.Length + 1];
-        newArgs[0] = controller;
-        for (var i = 0; i < args.Length; i++)
-        {
-            newArgs[i + 1] = args[i];
-        }
-        return newArgs;
-    }
-
-    /// <summary>
-    /// Binds named arguments from <paramref name="args"/> to the corresponding property on <see cref="T"/>
-    /// </summary>
-    internal static T Bind<T>(string[] args) => (T)Bind(typeof(T), args);
 
     /// <summary>
     /// Binds named arguments from <paramref name="args"/> to the corresponding property on <paramref name="type"/>

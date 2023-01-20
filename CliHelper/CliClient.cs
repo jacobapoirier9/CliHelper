@@ -1,15 +1,30 @@
 ﻿using CliHelper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+
+internal static class Configuration
+{
+    public static readonly Type[] SimpleTypes = new Type[]
+    {
+        typeof(string),
+
+        typeof(bool), typeof(char), typeof(DateTime), typeof(TimeSpan),
+        typeof(bool?), typeof(char?), typeof(DateTime?), typeof(TimeSpan?),
+
+        typeof(byte), typeof(short), typeof(int), typeof(long), typeof(float), typeof(double), typeof(decimal),
+        typeof(byte?), typeof(short?), typeof(int?), typeof(long?), typeof(float?), typeof(double?), typeof(decimal?),
+    };
+}
 
 public sealed class CliClient
 {
     /// <summary>
     /// The core collection of controller/actions that have been registered.
     /// </summary>
-    private List<CliExecutionContext> _cliExecutionContexts;
+    private List<ControllerContext> _controllers;
 
     private IServiceCollection _serviceCollection;
     private IServiceProvider _serviceProvider;
@@ -17,61 +32,114 @@ public sealed class CliClient
     /// <summary>
     /// The default, if any, controller to use for the CLI. If one is specified, no other controllers can be added to the collection.
     /// </summary>
-    private string _primaryControllerOverride;
+    private ControllerContext _primaryControllerOverride;
 
     private CliClient()
     {
-        _cliExecutionContexts = new List<CliExecutionContext>();
+        _controllers = new List<ControllerContext>();
         _serviceCollection = new ServiceCollection();
     }
 
-    private string ResolveControllerReference(CliExecutionContext executionContext)
+    private string ResolveControllerReference(ControllerContext controller)
     {
-        var controllerReference = 
-            executionContext.ControllerAttribute?.Alias 
-            ?? executionContext.ControllerType.Name.Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty);
+        var controllerReference =
+            controller.ControllerAttribute?.Alias
+            ?? controller.ControllerType.Name.Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty);
 
         return controllerReference;
     }
 
-    private string ResolveActionReference(CliExecutionContext executionContext)
+    private string ResolveActionReference(ActionContext action)
     {
         var actionReference =
-            executionContext.ActionAttribute?.Alias
-            ?? executionContext.ActionMethod.Name;
+            action.ActionAttribute?.Alias
+            ?? action.ActionMethod.Name;
 
         return actionReference;
     }
 
-    private CliExecutionContext GetCliExecutionContext(CliArguments cliArguments)
+    private string ResolveParameterReference(ParameterContext parameter)
     {
-        var filteredByController = _cliExecutionContexts
-            //.Where(ctx => (ctx.ControllerAttribute?.Alias ?? ctx.ControllerType.Name).StartsWith(cliArguments.CliController, StringComparison.OrdinalIgnoreCase))
-            .Where(ctx => string.Equals(
-                ResolveControllerReference(ctx), 
-                cliArguments.CliController, 
-                StringComparison.OrdinalIgnoreCase))
+        var parameterReference =
+            parameter.ActionParameterAttribute?.Alias
+            ?? "--" + parameter.ActionParameter.Name;
+
+        return parameterReference;
+    }
+
+    private string ResolvePropertyReference(PropertyInfo property)
+    {
+        var propertyReference =
+            property.GetCustomAttribute<CliAttribute>()?.Alias
+            ?? "--" + property.Name;
+
+        return propertyReference;
+    }
+
+    private void RegisterAssembly(Assembly controllersAssembly)
+    {
+        var controllerTypes = controllersAssembly.GetTypes()
+            .Where(t => t.IsSubclassOf(typeof(CliController)))
             .ToList();
 
-        if (!filteredByController.Any())
-            throw new ApplicationException($"Could not find a matching controller for {cliArguments.CliController}");
+        foreach (var controllerType in controllerTypes)
+        {
+            RegisterController(controllerType);
+        }
+    }
 
-        var filteredByAction = filteredByController
-             .Where(ctx => string.Equals(
-                 ResolveActionReference(ctx), 
-                 cliArguments.CliAction, 
-                 StringComparison.OrdinalIgnoreCase))
-             .ToList();
+    private void RegisterController(Type controllerType)
+    {
+        if (!controllerType.IsSubclassOf(typeof(CliController)))
+            throw new ControllerException($"{controllerType.Name} must inherit from parent class {typeof(CliController)}");
 
-        if (!filteredByAction.Any())
-            throw new ApplicationException($"Could not find a matching action for {cliArguments.CliAction} on controller {cliArguments.CliController}");
+        var controller = new ControllerContext
+        {
+            ControllerType = controllerType,
+            ControllerAttribute = controllerType.GetCustomAttribute<CliAttribute>(),
+            Actions = new List<ActionContext>()
+        };
 
-        // TODO: this should be moved to the AddControllers functionality.
-        if (filteredByAction.Many())
-            throw new ApplicationException($"Could not resolve a single action for {cliArguments.CliAction} on controller {cliArguments.CliController}");
+        var actionMethods = controllerType.GetMethods()
+            .Where(m => m.IsPublic && m.DeclaringType == controllerType)
+            .ToList();
 
-        var executionContext = filteredByAction.Single();
-        return executionContext;
+        if (!actionMethods.Any())
+            throw new ControllerException($"{controllerType.Name} has no public executable action methods");
+
+        foreach (var actionMethod in actionMethods)
+        {
+            var action = new ActionContext
+            {
+                ActionMethod = actionMethod,
+                ActionAttribute = actionMethod.GetCustomAttribute<CliAttribute>(),
+                Parameters = new List<ParameterContext>()
+            };
+
+            if (controller.Actions.Any(a => string.Equals(ResolveActionReference(a), ResolveActionReference(action), StringComparison.OrdinalIgnoreCase)))
+                throw new ControllerException($"{ResolveActionReference(action)} cannot be specified more than once");
+
+            var actionParameters = actionMethod.GetParameters().ToList();
+            if (actionParameters.Count > 1 && !actionParameters.All(ap => Configuration.SimpleTypes.Contains(ap.ParameterType)))
+                throw new ControllerException($"Parameter list must either be simple types or one strong type");
+
+            foreach (var actionParamter in actionParameters)
+            {
+                var parameter = new ParameterContext
+                {
+                    ActionParameter = actionParamter,
+                    ActionParameterAttribute = actionParamter.GetCustomAttribute<CliAttribute>()
+                };
+
+                action.Parameters.Add(parameter);
+            }
+
+            controller.Actions.Add(action);
+        }
+
+        _controllers.Add(controller);
+
+        _serviceCollection.AddTransient(controllerType);
     }
 
     /// <summary>
@@ -79,52 +147,43 @@ public sealed class CliClient
     /// </summary>
     public CliClient AddControllers(Assembly assembly = null)
     {
-        // Default to the calling assembly so the user does not have to manually provide the assembly but can if needed.
         if (assembly is null)
             assembly = Assembly.GetCallingAssembly();
 
-        // If a primary controller is set, the user should not be able to add any more controllers.
         if (_primaryControllerOverride is not null)
-            throw new ControllerAlreadyAddedException($"A primary controller has already been registered using {nameof(AddPrimaryController)}. Please remove call to {nameof(AddPrimaryController)} to use {nameof(AddControllers)}");
+            throw new ControllerException($"A primary controller has already been registered using {nameof(AddPrimaryController)}. Please remove call to {nameof(AddPrimaryController)} to use {nameof(AddControllers)}");
 
-        _cliExecutionContexts = AssemblyHelper.FindCliActions(assembly);
-        foreach (var action in _cliExecutionContexts)
+        RegisterAssembly(assembly);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a single controller to the controller collection.
+    /// If this option is used, action controller can not be specified at the CLI.
+    /// </summary>
+    public CliClient AddControllers(params Type[] controllerTypes)
+    {
+        foreach (var controllerType in controllerTypes)
         {
-            // Each controller may attempt to be added more than once so we want to use TryAddTransient here.
-            _serviceCollection.TryAddTransient(action.ControllerType);
+            RegisterController(controllerType);
         }
 
         return this;
     }
 
     /// <summary>
-    /// Adds a single controller to the controller/action collection.
-    /// If this option is used, a controller can not be specified at the CLI.
+    /// Adds a single controller to the controller collection.
+    /// If this option is used, action controller can not be specified at the CLI.
     /// </summary>
     public CliClient AddPrimaryController(Type controllerType)
     {
-        // If controllers have been added, the user should not be able to set a primary controller.
-        if (_cliExecutionContexts.Count > 0)
-        {
-            var controllerCount = _cliExecutionContexts
-                .Select(a => a.ControllerType)
-                .Distinct()
-                .Count();
+        if (_controllers.Any())
+            throw new ControllerException($"{_controllers.Count} controllers have already been registerd using {nameof(AddControllers)}. Please remove call to {nameof(AddControllers)} to use {nameof(AddPrimaryController)}.");
 
-            throw new ControllerAlreadyAddedException($"{controllerCount} controllers have already been registerd using {nameof(AddControllers)}. Please remove call to {nameof(AddControllers)} to use {nameof(AddPrimaryController)}.");
-        }
+        RegisterController(controllerType);
 
-        // Controllers must inherit CliController. This is the flag for controllers and common functionality for controllers could be added in the future similar to MVC.
-        if (!controllerType.IsSubclassOf(typeof(CliController)))
-            throw new NotImplementedException($"Controller {controllerType.Name} must implement {typeof(CliController)}");
-
-        _cliExecutionContexts = AssemblyHelper.FindCliActions(controllerType);
-
-        var executionContext = _cliExecutionContexts.First() ;// TODO: Should we do a null check here to make sure at least one action is added?
-        _primaryControllerOverride = ResolveControllerReference(executionContext);
-
-        _serviceCollection.TryAddTransient(controllerType);
-
+        _primaryControllerOverride = _controllers.Single();
         return this;
     }
 
@@ -134,104 +193,109 @@ public sealed class CliClient
     public CliClient AddServices(Action<IServiceCollection> addServices)
     {
         addServices(_serviceCollection);
-        _serviceProvider = _serviceCollection.BuildServiceProvider();
-
         return this;
     }
 
     /// <summary>
-    /// Executes a controller/action based on user parameters.
+    /// Executes action controller/action based on user parameters.
     /// </summary>
     public CliClient Run(string[] args)
     {
-        Run<object>(args);
+        RunMaster<object>(args.ToList());
         return this;
     }
 
     /// <summary>
-    /// Executes a controller/action based on user parameters.
+    /// Executes action controller/action based on user parameters.
     /// </summary>
     public T Run<T>(string[] args)
     {
-        if (_serviceProvider is null)
-            _serviceProvider = _serviceCollection.BuildServiceProvider();
+        return RunMaster<T>(args.ToList());
+    }
 
-        // If a primary controller has been added, it will be inserted to the array at index [0].
+    private T RunMaster<T>(List<string> args)
+    {
+        _serviceProvider = _serviceCollection.BuildServiceProvider();
+
+        // If action primary controller has been added, it will be inserted to the array at index [0].
         if (_primaryControllerOverride is not null)
+            args.Insert(0, ResolveControllerReference(_primaryControllerOverride));
+
+        var targetController = args.ElementAtOrDefault(0);
+        if (targetController is null)
+            throw new ApplicationException("Must specify a controller");
+
+        var controller = _controllers.FirstOrDefault(controller => string.Equals(targetController, ResolveControllerReference(controller), StringComparison.OrdinalIgnoreCase));
+        if (controller is null)
+            throw new ApplicationException($"No controller registered with criteria {targetController}");
+
+        var targetAction = args.ElementAtOrDefault(1);
+        if (targetAction is null)
+            throw new ApplicationException("Must specify an action");
+
+        var action = controller.Actions.FirstOrDefault(action => string.Equals(targetAction, ResolveActionReference(action), StringComparison.OrdinalIgnoreCase));
+        if (action is null)
+            throw new ApplicationException($"No action found with criteria {targetAction}");
+
+        var actionParameters = default(List<object>);
+        var remainingArgs = args.GetRange(2, args.Count - 2);
+
+        if (action.Parameters.Count == 1 && !Configuration.SimpleTypes.Contains(action.Parameters.First().ActionParameter.ParameterType))
         {
-            args = ArgumentHelper.InsertController(args, _primaryControllerOverride);
+            var actionParameterType = action.Parameters.First().ActionParameter.ParameterType;
+            var actionParameter = Activator.CreateInstance(actionParameterType);
+
+            foreach (var property in actionParameterType.GetProperties())
+            {
+                var propertyReference = ResolvePropertyReference(property);
+
+                var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(propertyReference, ra, StringComparison.OrdinalIgnoreCase));
+                if (threadMatch is null)
+                    continue;
+
+                if (property.PropertyType.In(typeof(bool), typeof(bool?)))
+                {
+                    property.SetValue(actionParameter, true);
+                    continue;
+                }
+
+                var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
+                var value = ArgumentHelper.ConvertValue(property.PropertyType, remainingArgs.ElementAtOrDefault(valueIndex));
+                property.SetValue(actionParameter, value);
+            }
+
+            actionParameters = new List<object> { actionParameter };
         }
-
-        var cliArgs = ArgumentHelper.ParseCliArguments(args);
-        var executionContext = GetCliExecutionContext(cliArgs);
-
-
-
-
-
-        // Copied from V1 and could be simplified.
-
-
-
-        // Enumerator will be used to pull misc args as the process maps the named args.
-        var remainingArgsEnumerator = cliArgs.RemainingArgs.GetEnumerator();
-        var methodParameters = new List<object>();
-
-        // Loop through the paramters on the selected methods.
-        foreach (var parameter in executionContext.ActionMethod.GetParameters())
+        else
         {
-            // Non-Nullable types are required from the user.
-            if (parameter.ParameterType.In(
-                typeof(bool), typeof(short), typeof(int), typeof(long), typeof(float), typeof(double), typeof(decimal)
-            ))
+            actionParameters = new List<object>(action.Parameters.Count);
+            for (var i = 0; i < action.Parameters.Count; i++)
             {
-                if (remainingArgsEnumerator.MoveNext())
+                var parameter = action.Parameters[i];
+                var parameterReference = ResolveParameterReference(parameter);
+
+                var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(parameterReference, ra, StringComparison.OrdinalIgnoreCase));
+                if (threadMatch is null)
                 {
-                    var cliValue = remainingArgsEnumerator.Current.ToString();
-                    var parsedValue = ArgumentHelper.ConvertValue(parameter.ParameterType, cliValue);
-                    methodParameters.Add(parsedValue);
+                    actionParameters.Add(null);
+                    continue;
                 }
-                else
+
+                if (parameter.ActionParameter.ParameterType.In(typeof(bool), typeof(bool?)))
                 {
-                    throw new ApplicationException($"Unable to resolve a {parameter.ParameterType} for parameter {parameter.Name}");
+                    actionParameters.Add(true);
+                    continue;
                 }
-            }
-            // Nullable should have a value provided, but is not required. Generally, this should be at the end of the parameter list or removed all together.
-            else if (parameter.ParameterType.In(
-                typeof(string), typeof(bool?), typeof(short?), typeof(int?), typeof(long?), typeof(float?), typeof(double?), typeof(decimal?)
-            ))
-            {
-                if (remainingArgsEnumerator.MoveNext())
-                {
-                    var cliValue = remainingArgsEnumerator.Current.ToString();
-                    var parsedValue = ArgumentHelper.ConvertValue(parameter.ParameterType, cliValue);
-                    methodParameters.Add(parsedValue);
-                }
-                else
-                {
-                    methodParameters.Add(null);
-                }
-            }
-            // Otherwise, we will either resolve from dependency injection or attempt to bind named arguments to a model.
-            else
-            {
-                var service = _serviceProvider.GetService(parameter.ParameterType);
-                if (service is not null)
-                    methodParameters.Add(service);
-                else
-                {
-                    // A potential flaw is that if a binded parameter comes before a simple parameter, the simple parameter might be read as the binded parameter name.
-                    // For now, binded parameters should appear last in the parameter list.
-                    // If we bind a parameter, we may want to leave this loop early.
-                    methodParameters.Add(ArgumentHelper.Bind(parameter.ParameterType, cliArgs.RemainingArgs));
-                    break;
-                }
+
+                var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
+                var value = ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, remainingArgs.ElementAtOrDefault(valueIndex));
+                actionParameters.Add(value);
             }
         }
 
         // Invoke command and handle the response. If the target method is async, it will be handled here.
-        var instance = _serviceProvider.GetRequiredService(executionContext.ControllerType);
-        var returned = executionContext.ActionMethod.Invoke(instance, methodParameters.ToArray());
+        var instance = _serviceProvider.GetRequiredService(controller.ControllerType);
+        var returned = action.ActionMethod.Invoke(instance, actionParameters.ToArray());
 
         if (returned is Task emptyTask)
         {
