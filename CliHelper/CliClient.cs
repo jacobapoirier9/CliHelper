@@ -58,6 +58,24 @@ public sealed class CliClient
         return actionReference;
     }
 
+    private string ResolveParameterReference(ParameterContext parameter)
+    {
+        var parameterReference =
+            parameter.ActionParameterAttribute?.Alias
+            ?? "--" + parameter.ActionParameter.Name;
+
+        return parameterReference;
+    }
+
+    private string ResolvePropertyReference(PropertyInfo property)
+    {
+        var propertyReference =
+            property.GetCustomAttribute<CliAttribute>()?.Alias
+            ?? "--" + property.Name;
+
+        return propertyReference;
+    }
+
     private void RegisterAssembly(Assembly controllersAssembly)
     {
         var controllerTypes = controllersAssembly.GetTypes()
@@ -215,76 +233,65 @@ public sealed class CliClient
         if (action is null)
             throw new ApplicationException($"No action found with criteria {targetAction}");
 
+        var actionParameters = default(List<object>);
         var remainingArgs = args.GetRange(2, args.Count - 2);
 
-
-
-
-
-
-        // Copied from V1 and could be simplified.
-
-
-
-        // Enumerator will be used to pull misc args as the process maps the named args.
-        var remainingArgsEnumerator = remainingArgs.GetEnumerator();
-        var methodParameters = new List<object>();
-
-        // Loop through the paramters on the selected methods.
-        foreach (var parameter in action.ActionMethod.GetParameters())
+        if (action.Parameters.Count == 1 && !Configuration.SimpleTypes.Contains(action.Parameters.First().ActionParameter.ParameterType))
         {
-            // Non-Nullable types are required from the user.
-            if (parameter.ParameterType.In(
-                typeof(bool), typeof(short), typeof(int), typeof(long), typeof(float), typeof(double), typeof(decimal)
-            ))
+            var actionParameterType = action.Parameters.First().ActionParameter.ParameterType;
+            var actionParameter = Activator.CreateInstance(actionParameterType);
+
+            foreach (var property in actionParameterType.GetProperties())
             {
-                if (remainingArgsEnumerator.MoveNext())
+                var propertyReference = ResolvePropertyReference(property);
+
+                var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(propertyReference, ra, StringComparison.OrdinalIgnoreCase));
+                if (threadMatch is null)
+                    continue;
+
+                if (property.PropertyType.In(typeof(bool), typeof(bool?)))
                 {
-                    var cliValue = remainingArgsEnumerator.Current.ToString();
-                    var parsedValue = ArgumentHelper.ConvertValue(parameter.ParameterType, cliValue);
-                    methodParameters.Add(parsedValue);
+                    property.SetValue(actionParameter, true);
+                    continue;
                 }
-                else
-                {
-                    throw new ApplicationException($"Unable to resolve a {parameter.ParameterType} for parameter {parameter.Name}");
-                }
+
+                var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
+                var value = ArgumentHelper.ConvertValue(property.PropertyType, remainingArgs.ElementAtOrDefault(valueIndex));
+                property.SetValue(actionParameter, value);
             }
-            // Nullable should have action value provided, but is not required. Generally, this should be at the end of the parameter list or removed all together.
-            else if (parameter.ParameterType.In(
-                typeof(string), typeof(bool?), typeof(short?), typeof(int?), typeof(long?), typeof(float?), typeof(double?), typeof(decimal?)
-            ))
+
+            actionParameters = new List<object> { actionParameter };
+        }
+        else
+        {
+            actionParameters = new List<object>(action.Parameters.Count);
+            for (var i = 0; i < action.Parameters.Count; i++)
             {
-                if (remainingArgsEnumerator.MoveNext())
+                var parameter = action.Parameters[i];
+                var parameterReference = ResolveParameterReference(parameter);
+
+                var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(parameterReference, ra, StringComparison.OrdinalIgnoreCase));
+                if (threadMatch is null)
                 {
-                    var cliValue = remainingArgsEnumerator.Current.ToString();
-                    var parsedValue = ArgumentHelper.ConvertValue(parameter.ParameterType, cliValue);
-                    methodParameters.Add(parsedValue);
+                    actionParameters.Add(null);
+                    continue;
                 }
-                else
+
+                if (parameter.ActionParameter.ParameterType.In(typeof(bool), typeof(bool?)))
                 {
-                    methodParameters.Add(null);
+                    actionParameters.Add(true);
+                    continue;
                 }
-            }
-            // Otherwise, we will either resolve from dependency injection or attempt to bind named arguments to action model.
-            else
-            {
-                var service = _serviceProvider.GetService(parameter.ParameterType);
-                if (service is not null)
-                    methodParameters.Add(service);
-                else
-                {
-                    // A potential flaw is that if action binded parameter comes before action simple parameter, the simple parameter might be read as the binded parameter name.
-                    // For now, binded parameters should appear last in the parameter list.
-                    // If we bind action parameter, we may want to leave this loop early.
-                    methodParameters.Add(ArgumentHelper.Bind(parameter.ParameterType, remainingArgs.ToArray()));
-                    break;
-                }
+
+                var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
+                var value = ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, remainingArgs.ElementAtOrDefault(valueIndex));
+                actionParameters.Add(value);
             }
         }
 
         // Invoke command and handle the response. If the target method is async, it will be handled here.
         var instance = _serviceProvider.GetRequiredService(controller.ControllerType);
-        var returned = action.ActionMethod.Invoke(instance, methodParameters.ToArray());
+        var returned = action.ActionMethod.Invoke(instance, actionParameters.ToArray());
 
         if (returned is Task emptyTask)
         {
@@ -298,6 +305,84 @@ public sealed class CliClient
         }
 
         return (T)returned;
+
+
+        //// Copied from V1 and could be simplified.
+
+
+
+        //// Enumerator will be used to pull misc args as the process maps the named args.
+        //var remainingArgsEnumerator = remainingArgs.GetEnumerator();
+        //var methodParameters = new List<object>();
+
+        //// Loop through the paramters on the selected methods.
+        //foreach (var parameter in action.ActionMethod.GetParameters())
+        //{
+        //    // Non-Nullable types are required from the user.
+        //    if (parameter.ParameterType.In(
+        //        typeof(bool), typeof(short), typeof(int), typeof(long), typeof(float), typeof(double), typeof(decimal)
+        //    ))
+        //    {
+        //        if (remainingArgsEnumerator.MoveNext())
+        //        {
+        //            var cliValue = remainingArgsEnumerator.Current.ToString();
+        //            var parsedValue = ArgumentHelper.ConvertValue(parameter.ParameterType, cliValue);
+        //            methodParameters.Add(parsedValue);
+        //        }
+        //        else
+        //        {
+        //            throw new ApplicationException($"Unable to resolve a {parameter.ParameterType} for parameter {parameter.Name}");
+        //        }
+        //    }
+        //    // Nullable should have action value provided, but is not required. Generally, this should be at the end of the parameter list or removed all together.
+        //    else if (parameter.ParameterType.In(
+        //        typeof(string), typeof(bool?), typeof(short?), typeof(int?), typeof(long?), typeof(float?), typeof(double?), typeof(decimal?)
+        //    ))
+        //    {
+        //        if (remainingArgsEnumerator.MoveNext())
+        //        {
+        //            var cliValue = remainingArgsEnumerator.Current.ToString();
+        //            var parsedValue = ArgumentHelper.ConvertValue(parameter.ParameterType, cliValue);
+        //            methodParameters.Add(parsedValue);
+        //        }
+        //        else
+        //        {
+        //            methodParameters.Add(null);
+        //        }
+        //    }
+        //    // Otherwise, we will either resolve from dependency injection or attempt to bind named arguments to action model.
+        //    else
+        //    {
+        //        var service = _serviceProvider.GetService(parameter.ParameterType);
+        //        if (service is not null)
+        //            methodParameters.Add(service);
+        //        else
+        //        {
+        //            // A potential flaw is that if action binded parameter comes before action simple parameter, the simple parameter might be read as the binded parameter name.
+        //            // For now, binded parameters should appear last in the parameter list.
+        //            // If we bind action parameter, we may want to leave this loop early.
+        //            methodParameters.Add(ArgumentHelper.Bind(parameter.ParameterType, remainingArgs.ToArray()));
+        //            break;
+        //        }
+        //    }
+        //}
+
+        //// Invoke command and handle the response. If the target method is async, it will be handled here.
+        //var instance = _serviceProvider.GetRequiredService(controller.ControllerType);
+        //var returned = action.ActionMethod.Invoke(instance, methodParameters.ToArray());
+
+        //if (returned is Task emptyTask)
+        //{
+        //    emptyTask.Wait();
+        //    return default(T);
+        //}
+        //else if (returned is Task<T> typedTask)
+        //{
+        //    typedTask.Wait();
+        //    return typedTask.Result;
+        //}
+
+        //return (T)returned;
     }
 
     /// <summary>

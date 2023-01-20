@@ -6,7 +6,7 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { "advanced", "index" };
+        args = new string[] { "advanced", "index", "--name", "Jake" };
 
         var client = CliClient.Create()
             .AddControllers()
@@ -22,28 +22,8 @@ internal static class Program
 public class AdvancedController : CliController
 {
     [Cli("index")]
-    public void Index()
+    public void Index(int age, string name)
     {
         Console.WriteLine("Here!");
     }
-
-    public void AllowComplex(Test request)
-    {
-
-    }
-
-    public void AllowSimple(string name, int age)
-    {
-
-    }
-
-    public void DisallowBoth(Test request, string name, int age)
-    {
-
-    }
-}
-
-public class Test
-{
-    public string Name { get; set; }
 }

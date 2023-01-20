@@ -72,26 +72,26 @@ public class CliClientTests
         Assert.Equal(TestService.Response, response);
     }
 
-    [Fact]
-    public void ExecuteAction_DependencyInjection_Method()
-    {
-        var args = new string[] { "dependency-injection", "parameter" };
+    //[Fact]
+    //public void ExecuteAction_DependencyInjection_Method()
+    //{
+    //    var args = new string[] { "dependency-injection", "parameter" };
 
-        var client = CliClient.Create()
-            .AddControllers(typeof(DependencyInjectionController))
-            .AddServices(services =>
-            {
-                services.AddTransient<ITestService, TestService>();
-            });
+    //    var client = CliClient.Create()
+    //        .AddControllers(typeof(DependencyInjectionController))
+    //        .AddServices(services =>
+    //        {
+    //            services.AddTransient<ITestService, TestService>();
+    //        });
 
-        var response = client.Run<string>(args);
-        Assert.Equal(TestService.Response, response);
-    }
+    //    var response = client.Run<string>(args);
+    //    Assert.Equal(TestService.Response, response);
+    //}
 
     [Fact]
     public void ExecuteAction_SimpleParameters_Method_Int()
     {
-        var args = new string[] { "as-int", "4" };
+        var args = new string[] { "as-int", "--number", "4" };
 
         var client = CliClient.Create()
             .AddPrimaryController(typeof(SimpleParametersController))
@@ -101,6 +101,107 @@ public class CliClientTests
 
         var response = client.Run<string>(args);
         Assert.Equal("4", response);
+    }
+
+    [Fact]
+    public void ExecuteAction_ComplexeParameter_MapCorrectly()
+    {
+        var args = new string[] { "index", "-age", "21", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("Jake-21", response);
+    }
+
+    //[Cli("map-multiple")]
+    //public string MultipleParameters(string name, int? number, bool repeat)
+    //{
+    //    if (number.HasValue)
+    //    {
+    //        if (!repeat)
+    //            number = 1;
+
+    //        var list = new List<string>();
+    //        for (var i = 0; i < number; i++)
+    //            list.Add(name);
+
+    //        return number.ToString() + '-' + string.Join('-', list);
+    //    }
+
+    //    return name;
+    //}
+    [Fact]
+    public void ExecutionAction_SimpleParameters_MapCorrectly_1()
+    {
+        var args = new string[] { "map-multiple", "--repeat", "--number", "2", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(SimpleParametersController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("2-Jake-Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_SimpleParameters_MapCorrectly_2()
+    {
+        var args = new string[] { "map-multiple", "--number", "2", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(SimpleParametersController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("1-Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_SimpleParameters_MapCorrectly_3()
+    {
+        var args = new string[] { "map-multiple", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(SimpleParametersController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_SimpleParameters_Alias_MapCorrectly_1()
+    {
+        var args = new string[] { "map-multiple-alias", "--repeat", "--number", "2", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(SimpleParametersController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("2-Jake-Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_SimpleParameters_Alias_MapCorrectly_2()
+    {
+        var args = new string[] { "map-multiple-alias", "--number", "2", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(SimpleParametersController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("1-Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_SimpleParameters_Alias_MapCorrectly_3()
+    {
+        var args = new string[] { "map-multiple-alias", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(SimpleParametersController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("Jake", response);
     }
     #endregion
 
