@@ -2,25 +2,19 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
+using System.Data.Common;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 
-internal static class Configuration
+public class CliClientOptions
 {
-    public static readonly Type[] SimpleTypes = new Type[]
-    {
-        typeof(string),
-
-        typeof(bool), typeof(char), typeof(DateTime), typeof(TimeSpan),
-        typeof(bool?), typeof(char?), typeof(DateTime?), typeof(TimeSpan?),
-
-        typeof(byte), typeof(short), typeof(int), typeof(long), typeof(float), typeof(double), typeof(decimal),
-        typeof(byte?), typeof(short?), typeof(int?), typeof(long?), typeof(float?), typeof(double?), typeof(decimal?),
-    };
+    public string DefaultCommandPrefix { get; set; }
 }
 
 public sealed class CliClient
 {
+
     /// <summary>
     /// The core collection of controller/actions that have been registered.
     /// </summary>
@@ -34,17 +28,23 @@ public sealed class CliClient
     /// </summary>
     private ControllerContext _primaryControllerOverride;
 
+    private readonly CliClientOptions _options;
+
     private CliClient()
     {
         _controllers = new List<ControllerContext>();
         _serviceCollection = new ServiceCollection();
+        _options = new CliClientOptions
+        {
+            DefaultCommandPrefix = "--"
+        };
     }
 
     private string ResolveControllerReference(ControllerContext controller)
     {
         var controllerReference =
             controller.ControllerAttribute?.Alias
-            ?? controller.ControllerType.Name.Replace(nameof(CliController), string.Empty).Replace("Controller", string.Empty);
+            ?? controller.ControllerType.Name.Replace(nameof(Controller), string.Empty).Replace("Controller", string.Empty);
 
         return controllerReference;
     }
@@ -62,7 +62,7 @@ public sealed class CliClient
     {
         var parameterReference =
             parameter.ActionParameterAttribute?.Alias
-            ?? "--" + parameter.ActionParameter.Name;
+            ?? _options.DefaultCommandPrefix + parameter.ActionParameter.Name;
 
         return parameterReference;
     }
@@ -71,7 +71,7 @@ public sealed class CliClient
     {
         var propertyReference =
             property.GetCustomAttribute<CliAttribute>()?.Alias
-            ?? "--" + property.Name;
+            ?? _options.DefaultCommandPrefix + property.Name;
 
         return propertyReference;
     }
@@ -79,7 +79,7 @@ public sealed class CliClient
     private void RegisterAssembly(Assembly controllersAssembly)
     {
         var controllerTypes = controllersAssembly.GetTypes()
-            .Where(t => t.IsSubclassOf(typeof(CliController)))
+            .Where(t => t.IsSubclassOf(typeof(Controller)))
             .ToList();
 
         foreach (var controllerType in controllerTypes)
@@ -90,8 +90,8 @@ public sealed class CliClient
 
     private void RegisterController(Type controllerType)
     {
-        if (!controllerType.IsSubclassOf(typeof(CliController)))
-            throw new ControllerException($"{controllerType.Name} must inherit from parent class {typeof(CliController)}");
+        if (!controllerType.IsSubclassOf(typeof(Controller)))
+            throw new ControllerException($"{controllerType.Name} must inherit from parent class {typeof(Controller)}");
 
         var controller = new ControllerContext
         {
@@ -143,7 +143,7 @@ public sealed class CliClient
     }
 
     /// <summary>
-    /// Searches the assembly for child classes of type <see cref="CliController"/> and adds them to the controller/action collection.
+    /// Searches the assembly for child classes of type <see cref="Controller"/> and adds them to the controller/action collection.
     /// </summary>
     public CliClient AddControllers(Assembly assembly = null)
     {
@@ -197,6 +197,15 @@ public sealed class CliClient
     }
 
     /// <summary>
+    /// Overrides default settings for the CLI client.
+    /// </summary>
+    public CliClient ConfigureOptions(Action<CliClientOptions> configureOptoins)
+    {
+        configureOptoins(_options);
+        return this;
+    }
+
+    /// <summary>
     /// Executes action controller/action based on user parameters.
     /// </summary>
     public CliClient Run(string[] args)
@@ -245,23 +254,51 @@ public sealed class CliClient
             var actionParameterType = action.Parameters.First().ActionParameter.ParameterType;
             var actionParameter = Activator.CreateInstance(actionParameterType);
 
+            var positionalParameter = 0;
             foreach (var property in actionParameterType.GetProperties())
             {
+                var propertyAttribute = property.GetCustomAttribute<CliAttribute>();
                 var propertyReference = ResolvePropertyReference(property);
 
                 var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(propertyReference, ra, StringComparison.OrdinalIgnoreCase));
                 if (threadMatch is null)
-                    continue;
+                {
+                    // If a named argument is not found, the first thing we want to check is a default value specified in the attribute.
+                    if (propertyAttribute?.DefaultValue is not null)
+                    {
+                        property.SetValue(actionParameter, propertyAttribute.DefaultValue);
+                    }
+                    // Otherwise, we want to grab the first remaining argument in the arguments list.
+                    // If nothing is found, add a null value to use the language default. (int = 0, int? = null).
+                    else
+                    {
+                        var firstValue = remainingArgs.FirstOrDefault();
+                        if (firstValue is null)
+                            continue;
+                        else
+                            property.SetValue(actionParameter, ArgumentHelper.ConvertValue(property.PropertyType, firstValue));
+
+                        remainingArgs.Remove(firstValue);
+                        positionalParameter++;
+                        continue;
+                    }
+                }
 
                 if (property.PropertyType.In(typeof(bool), typeof(bool?)))
                 {
+                    remainingArgs.Remove(threadMatch);
                     property.SetValue(actionParameter, true);
                     continue;
                 }
 
                 var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
-                var value = ArgumentHelper.ConvertValue(property.PropertyType, remainingArgs.ElementAtOrDefault(valueIndex));
-                property.SetValue(actionParameter, value);
+                var stringValue = remainingArgs.ElementAtOrDefault(valueIndex);
+
+                var convertedValue = ArgumentHelper.ConvertValue(property.PropertyType, stringValue);
+                property.SetValue(actionParameter, convertedValue);
+
+                remainingArgs.Remove(threadMatch);
+                remainingArgs.Remove(stringValue);
             }
 
             actionParameters = new List<object> { actionParameter };
@@ -269,6 +306,8 @@ public sealed class CliClient
         else
         {
             actionParameters = new List<object>(action.Parameters.Count);
+
+            var positionalParameter = 0;
             for (var i = 0; i < action.Parameters.Count; i++)
             {
                 var parameter = action.Parameters[i];
@@ -277,19 +316,43 @@ public sealed class CliClient
                 var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(parameterReference, ra, StringComparison.OrdinalIgnoreCase));
                 if (threadMatch is null)
                 {
-                    actionParameters.Add(null);
+                    // If a named argument is not found, the first thing we want to check is a default value specified in the attribute.
+                    if (parameter.ActionParameterAttribute?.DefaultValue is not null)
+                    {
+                        actionParameters.Add(parameter.ActionParameterAttribute.DefaultValue);
+                    }
+                    // Otherwise, we want to grab the first remaining argument in the arguments list.
+                    // If nothing is found, add a null value to use the language default. (int = 0, int? = null).
+                    else
+                    {
+                        var firstValue = remainingArgs.FirstOrDefault();
+                        if (firstValue is null)
+                            actionParameters.Add(null);
+                        else
+                            actionParameters.Add(ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, firstValue));
+
+                        remainingArgs.Remove(firstValue);
+                        positionalParameter++;
+                    }
+
                     continue;
                 }
 
                 if (parameter.ActionParameter.ParameterType.In(typeof(bool), typeof(bool?)))
                 {
+                    remainingArgs.Remove(threadMatch);
                     actionParameters.Add(true);
                     continue;
                 }
 
                 var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
-                var value = ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, remainingArgs.ElementAtOrDefault(valueIndex));
-                actionParameters.Add(value);
+                var stringValue = remainingArgs.ElementAtOrDefault(valueIndex);
+
+                var convertedValue = ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, stringValue);
+                actionParameters.Add(convertedValue);
+
+                remainingArgs.Remove(threadMatch);
+                remainingArgs.Remove(stringValue);
             }
         }
 

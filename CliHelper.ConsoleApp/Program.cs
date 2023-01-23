@@ -6,9 +6,13 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { "advanced", "index", "--name", "Jake" };
+        args = new string[] { "advanced", "index2", "5", "--name", "Jake" };
 
         var client = CliClient.Create()
+            .ConfigureOptions(options =>
+            {
+                options.DefaultCommandPrefix = "--";
+            })
             .AddControllers()
             .AddServices(services =>
             {
@@ -19,11 +23,24 @@ internal static class Program
 }
 
 [Cli("advanced")]
-public class AdvancedController : CliController
+public class AdvancedController : Controller
 {
     [Cli("index")]
-    public void Index(int age, string name)
+    public void Index(string name, int age)
     {
         Console.WriteLine("Here!");
     }
+
+    [Cli("index2")]
+    public void Index(Test request)
+    {
+
+    }
+}
+
+public class Test
+{
+    public string Name { get; set; }
+    public int Age { get; set; }
+
 }

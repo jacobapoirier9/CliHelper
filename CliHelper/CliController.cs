@@ -1,4 +1,0 @@
-﻿public abstract class CliController
-{
-
-}

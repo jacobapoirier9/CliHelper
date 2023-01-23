@@ -8,4 +8,6 @@ public class CliAttribute : Attribute
     { 
         Alias = alias; 
     }
+
+    public object DefaultValue { get; set; }
 }

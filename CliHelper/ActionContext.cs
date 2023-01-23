@@ -7,6 +7,5 @@ internal class ActionContext
 
     public CliAttribute ActionAttribute { get; set; }
 
-
     public List<ParameterContext> Parameters { get; set; }
 }

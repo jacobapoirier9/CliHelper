@@ -5,7 +5,7 @@ using System.Reflection;
 namespace CliHelper.Tests.Controllers;
 
 [Cli("basic")]
-public class BasicAliasController : CliController
+public class BasicAliasController : Controller
 {
     [Cli("index-one")]
     public string IndexOne() => nameof(IndexOne);
@@ -14,7 +14,7 @@ public class BasicAliasController : CliController
     public string IndexTwo() => nameof(IndexTwo);
 }
 
-public class BasicNoAliasController : CliController
+public class BasicNoAliasController : Controller
 {
     [Cli("index-one")]
     public string IndexOne() => nameof(IndexOne);
@@ -28,7 +28,7 @@ public class BasicNotImplementedController
 }
 
 [Cli("dependency-injection")]
-public class DependencyInjectionController : CliController
+public class DependencyInjectionController : Controller
 {
     private readonly ITestService _testService;
     public DependencyInjectionController(ITestService testService)
@@ -49,7 +49,7 @@ public class DependencyInjectionController : CliController
     }
 }
 
-public class SimpleParametersController : CliController
+public class SimpleParametersController : Controller
 {
     [Cli("as-int")]
     public string MethodWithInt(int number)
@@ -95,12 +95,12 @@ public class SimpleParametersController : CliController
     }
 }
 
-public class NoActionController : CliController
+public class NoActionController : Controller
 {
 
 }
 
-public class DuplicateActionController : CliController
+public class DuplicateActionController : Controller
 {
     [Cli("same-name")]
     public void MethodOne() { }
@@ -109,7 +109,7 @@ public class DuplicateActionController : CliController
     public void MethodTwo() { }
 }
 
-public class SimpleAndComplexController : CliController
+public class SimpleAndComplexController : Controller
 {
     public class Request
     {
@@ -120,7 +120,7 @@ public class SimpleAndComplexController : CliController
 }
 
 [Cli("complex")]
-public class ComplexParameterController : CliController
+public class ComplexParameterController : Controller
 {
     public class Person
     {
@@ -130,9 +130,67 @@ public class ComplexParameterController : CliController
         public int? Age { get; set; }
     }
 
+    public class MapMultipleNoAlias
+    {
+        public string Name { get; set; }
+
+        public int? Number { get; set; }
+
+        public bool Repeat { get; set; }
+    }
+
+    public class MapMultipleAlias
+    {
+        [Cli("--name")]
+        public string P1 { get; set; }
+
+        [Cli("--number")]
+        public int? P2 { get; set; }
+
+        [Cli("--repeat")]
+        public bool P3 { get; set; }
+    }
+
     [Cli("index")]
     public string Index(Person person)
     {
         return person.Name + "-" + person.Age;
+    }
+
+
+    [Cli("map-multiple")]
+    public string MultipleParameters(MapMultipleNoAlias request)
+    {
+        if (request.Number.HasValue)
+        {
+            if (!request.Repeat)
+                request.Number = 1;
+
+            var list = new List<string>();
+            for (var i = 0; i < request.Number; i++)
+                list.Add(request.Name);
+
+            return request.Number.ToString() + '-' + string.Join('-', list);
+        }
+
+        return request.Name;
+    }
+
+    [Cli("map-multiple-alias")]
+    public string MultipleParameters_CliAlias(MapMultipleAlias request)
+    {
+        if (request.P2.HasValue)
+        {
+            if (!request.P3)
+                request.P2 = 1;
+
+            var list = new List<string>();
+            for (var i = 0; i < request.P2; i++)
+                list.Add(request.P1);
+
+            return request.P2.ToString() + '-' + string.Join('-', list);
+        }
+
+        return request.P1;
     }
 }
