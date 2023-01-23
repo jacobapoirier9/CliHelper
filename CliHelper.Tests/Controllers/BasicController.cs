@@ -130,9 +130,67 @@ public class ComplexParameterController : Controller
         public int? Age { get; set; }
     }
 
+    public class MapMultipleNoAlias
+    {
+        public string Name { get; set; }
+
+        public int? Number { get; set; }
+
+        public bool Repeat { get; set; }
+    }
+
+    public class MapMultipleAlias
+    {
+        [Cli("--name")]
+        public string P1 { get; set; }
+
+        [Cli("--number")]
+        public int? P2 { get; set; }
+
+        [Cli("--repeat")]
+        public bool P3 { get; set; }
+    }
+
     [Cli("index")]
     public string Index(Person person)
     {
         return person.Name + "-" + person.Age;
+    }
+
+
+    [Cli("map-multiple")]
+    public string MultipleParameters(MapMultipleNoAlias request)
+    {
+        if (request.Number.HasValue)
+        {
+            if (!request.Repeat)
+                request.Number = 1;
+
+            var list = new List<string>();
+            for (var i = 0; i < request.Number; i++)
+                list.Add(request.Name);
+
+            return request.Number.ToString() + '-' + string.Join('-', list);
+        }
+
+        return request.Name;
+    }
+
+    [Cli("map-multiple-alias")]
+    public string MultipleParameters_CliAlias(MapMultipleAlias request)
+    {
+        if (request.P2.HasValue)
+        {
+            if (!request.P3)
+                request.P2 = 1;
+
+            var list = new List<string>();
+            for (var i = 0; i < request.P2; i++)
+                list.Add(request.P1);
+
+            return request.P2.ToString() + '-' + string.Join('-', list);
+        }
+
+        return request.P1;
     }
 }

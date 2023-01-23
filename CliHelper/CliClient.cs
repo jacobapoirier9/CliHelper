@@ -279,13 +279,19 @@ public sealed class CliClient
 
                 if (property.PropertyType.In(typeof(bool), typeof(bool?)))
                 {
+                    remainingArgs.Remove(threadMatch);
                     property.SetValue(actionParameter, true);
                     continue;
                 }
 
                 var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
-                var value = ArgumentHelper.ConvertValue(property.PropertyType, remainingArgs.ElementAtOrDefault(valueIndex));
-                property.SetValue(actionParameter, value);
+                var stringValue = remainingArgs.ElementAtOrDefault(valueIndex);
+
+                var convertedValue = ArgumentHelper.ConvertValue(property.PropertyType, stringValue);
+                property.SetValue(actionParameter, convertedValue);
+
+                remainingArgs.Remove(threadMatch);
+                remainingArgs.Remove(stringValue);
             }
 
             actionParameters = new List<object> { actionParameter };
@@ -332,8 +338,6 @@ public sealed class CliClient
                     continue;
                 }
 
-                Console.WriteLine("Args Before: " + string.Join(", ", remainingArgs));
-
                 var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
                 var stringValue = remainingArgs.ElementAtOrDefault(valueIndex);
 
@@ -342,8 +346,6 @@ public sealed class CliClient
 
                 remainingArgs.Remove(threadMatch);
                 remainingArgs.Remove(stringValue);
-
-                Console.WriteLine("Args After: " + string.Join(", ", remainingArgs));
             }
         }
 

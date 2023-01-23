@@ -240,6 +240,142 @@ public class CliClientTests
         var response = client.Run<string>(args);
         Assert.Equal("Jake", response);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    [Fact]
+    public void ExecutionAction_ComplexNamedParameters_NoAlias_MapCorrectly_1()
+    {
+        var args = new string[] { "map-multiple", "--repeat", "--number", "2", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("2-Jake-Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_ComplexNamedParameters_NoAlias_MapCorrectly_2()
+    {
+        var args = new string[] { "map-multiple", "--number", "2", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("1-Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_ComplexNamedParameters_NoAlias_MapCorrectly_3()
+    {
+        var args = new string[] { "map-multiple", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_ComplexNamedParameters_Alias_MapCorrectly_1()
+    {
+        var args = new string[] { "map-multiple-alias", "--repeat", "--number", "2", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("2-Jake-Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_ComplexNamedParameters_Alias_MapCorrectly_2()
+    {
+        var args = new string[] { "map-multiple-alias", "--number", "2", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("1-Jake", response);
+    }
+
+    [Fact]
+    public void ExecutionAction_ComplexNamedParameters_Alias_MapCorrectly_3()
+    {
+        var args = new string[] { "map-multiple-alias", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("Jake", response);
+    }
+
+
+    [Fact]
+    public void ExecuteAction_ComplexUnnamedParameters_NoAlias_MapCorrectly_1()
+    {
+        var args = new string[] { "map-multiple-alias", "Jake", "3", "true" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("3-Jake-Jake-Jake", response);
+    }
+
+    [Fact]
+    public void ExecuteAction_ComplexUnnamedParameters_NoAlias_MapCorrectly_2()
+    {
+        var args = new string[] { "map-multiple-alias", "Jake", "2" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("1-Jake", response);
+    }
+
+    [Fact]
+    public void ExecuteAction_ComplexUnnamedParameters_NoAlias_MapCorrectly_3()
+    {
+        var args = new string[] { "map-multiple-alias", "--name", "Jake" };
+
+        var client = CliClient.Create()
+            .AddPrimaryController(typeof(ComplexParameterController));
+
+        var response = client.Run<string>(args);
+        Assert.Equal("Jake", response);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     #endregion
 
     #region Controller Registration Tests
