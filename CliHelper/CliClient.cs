@@ -7,11 +7,6 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 
-public class CliClientOptions
-{
-    public string DefaultCommandPrefix { get; set; }
-}
-
 public sealed class CliClient
 {
 
