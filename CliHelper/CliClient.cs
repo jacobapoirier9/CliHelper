@@ -38,8 +38,8 @@ public sealed class CliClient
     private string ResolveControllerReference(ControllerContext controller)
     {
         var controllerReference =
-            controller.ControllerAttribute?.Alias
-            ?? controller.ControllerType.Name.Replace(nameof(Controller), string.Empty).Replace("Controller", string.Empty);
+            controller.CliAttribute?.Alias
+            ?? controller.Type.Name.Replace(nameof(Controller), string.Empty).Replace("Controller", string.Empty);
 
         return controllerReference;
     }
@@ -47,8 +47,8 @@ public sealed class CliClient
     private string ResolveActionReference(ActionContext action)
     {
         var actionReference =
-            action.ActionAttribute?.Alias
-            ?? action.ActionMethod.Name;
+            action.CliAttribute?.Alias
+            ?? action.MethodInfo.Name;
 
         return actionReference;
     }
@@ -56,8 +56,8 @@ public sealed class CliClient
     private string ResolveParameterReference(ParameterContext parameter)
     {
         var parameterReference =
-            parameter.ActionParameterAttribute?.Alias
-            ?? _options.DefaultCommandPrefix + parameter.ActionParameter.Name;
+            parameter.CliAttribute?.Alias
+            ?? _options.DefaultCommandPrefix + parameter.ParameterInfo.Name;
 
         return parameterReference;
     }
@@ -90,8 +90,8 @@ public sealed class CliClient
 
         var controller = new ControllerContext
         {
-            ControllerType = controllerType,
-            ControllerAttribute = controllerType.GetCustomAttribute<CliAttribute>(),
+            Type = controllerType,
+            CliAttribute = controllerType.GetCustomAttribute<CliAttribute>(),
             Actions = new List<ActionContext>()
         };
 
@@ -106,8 +106,8 @@ public sealed class CliClient
         {
             var action = new ActionContext
             {
-                ActionMethod = actionMethod,
-                ActionAttribute = actionMethod.GetCustomAttribute<CliAttribute>(),
+                MethodInfo = actionMethod,
+                CliAttribute = actionMethod.GetCustomAttribute<CliAttribute>(),
                 Parameters = new List<ParameterContext>()
             };
 
@@ -122,8 +122,8 @@ public sealed class CliClient
             {
                 var parameter = new ParameterContext
                 {
-                    ActionParameter = actionParamter,
-                    ActionParameterAttribute = actionParamter.GetCustomAttribute<CliAttribute>()
+                    ParameterInfo = actionParamter,
+                    CliAttribute = actionParamter.GetCustomAttribute<CliAttribute>()
                 };
 
                 action.Parameters.Add(parameter);
@@ -244,9 +244,9 @@ public sealed class CliClient
         var actionParameters = default(List<object>);
         var remainingArgs = args.GetRange(2, args.Count - 2);
 
-        if (action.Parameters.Count == 1 && !Configuration.SimpleTypes.Contains(action.Parameters.First().ActionParameter.ParameterType))
+        if (action.Parameters.Count == 1 && !Configuration.SimpleTypes.Contains(action.Parameters.First().ParameterInfo.ParameterType))
         {
-            var actionParameterType = action.Parameters.First().ActionParameter.ParameterType;
+            var actionParameterType = action.Parameters.First().ParameterInfo.ParameterType;
             var actionParameter = Activator.CreateInstance(actionParameterType);
 
             var positionalParameter = 0;
@@ -312,9 +312,9 @@ public sealed class CliClient
                 if (threadMatch is null)
                 {
                     // If a named argument is not found, the first thing we want to check is a default value specified in the attribute.
-                    if (parameter.ActionParameterAttribute?.DefaultValue is not null)
+                    if (parameter.CliAttribute?.DefaultValue is not null)
                     {
-                        actionParameters.Add(parameter.ActionParameterAttribute.DefaultValue);
+                        actionParameters.Add(parameter.CliAttribute.DefaultValue);
                     }
                     // Otherwise, we want to grab the first remaining argument in the arguments list.
                     // If nothing is found, add a null value to use the language default. (int = 0, int? = null).
@@ -324,7 +324,7 @@ public sealed class CliClient
                         if (firstValue is null)
                             actionParameters.Add(null);
                         else
-                            actionParameters.Add(ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, firstValue));
+                            actionParameters.Add(ArgumentHelper.ConvertValue(parameter.ParameterInfo.ParameterType, firstValue));
 
                         remainingArgs.Remove(firstValue);
                         positionalParameter++;
@@ -333,7 +333,7 @@ public sealed class CliClient
                     continue;
                 }
 
-                if (parameter.ActionParameter.ParameterType.In(typeof(bool), typeof(bool?)))
+                if (parameter.ParameterInfo.ParameterType.In(typeof(bool), typeof(bool?)))
                 {
                     remainingArgs.Remove(threadMatch);
                     actionParameters.Add(true);
@@ -343,7 +343,7 @@ public sealed class CliClient
                 var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
                 var stringValue = remainingArgs.ElementAtOrDefault(valueIndex);
 
-                var convertedValue = ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, stringValue);
+                var convertedValue = ArgumentHelper.ConvertValue(parameter.ParameterInfo.ParameterType, stringValue);
                 actionParameters.Add(convertedValue);
 
                 remainingArgs.Remove(threadMatch);
@@ -352,8 +352,8 @@ public sealed class CliClient
         }
 
         // Invoke command and handle the response. If the target method is async, it will be handled here.
-        var instance = _serviceProvider.GetRequiredService(controller.ControllerType);
-        var returned = action.ActionMethod.Invoke(instance, actionParameters.ToArray());
+        var instance = _serviceProvider.GetRequiredService(controller.Type);
+        var returned = action.MethodInfo.Invoke(instance, actionParameters.ToArray());
 
         if (returned is Task emptyTask)
         {

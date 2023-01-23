@@ -3,7 +3,7 @@ using System.Reflection;
 
 internal class ParameterContext
 {
-    public ParameterInfo ActionParameter { get; set; }
+    public ParameterInfo ParameterInfo { get; set; }
 
-    public CliAttribute ActionParameterAttribute { get; set; }
+    public CliAttribute CliAttribute { get; set; }
 }
