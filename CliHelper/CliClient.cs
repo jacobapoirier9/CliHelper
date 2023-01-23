@@ -2,7 +2,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
+using System.Data.Common;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 
 internal static class Configuration
@@ -245,13 +247,35 @@ public sealed class CliClient
             var actionParameterType = action.Parameters.First().ActionParameter.ParameterType;
             var actionParameter = Activator.CreateInstance(actionParameterType);
 
+            var positionalParameter = 0;
             foreach (var property in actionParameterType.GetProperties())
             {
+                var propertyAttribute = property.GetCustomAttribute<CliAttribute>();
                 var propertyReference = ResolvePropertyReference(property);
 
                 var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(propertyReference, ra, StringComparison.OrdinalIgnoreCase));
                 if (threadMatch is null)
-                    continue;
+                {
+                    // If a named argument is not found, the first thing we want to check is a default value specified in the attribute.
+                    if (propertyAttribute?.DefaultValue is not null)
+                    {
+                        property.SetValue(actionParameter, propertyAttribute.DefaultValue);
+                    }
+                    // Otherwise, we want to grab the first remaining argument in the arguments list.
+                    // If nothing is found, add a null value to use the language default. (int = 0, int? = null).
+                    else
+                    {
+                        var firstValue = remainingArgs.FirstOrDefault();
+                        if (firstValue is null)
+                            continue;
+                        else
+                            property.SetValue(actionParameter, ArgumentHelper.ConvertValue(property.PropertyType, firstValue));
+
+                        remainingArgs.Remove(firstValue);
+                        positionalParameter++;
+                        continue;
+                    }
+                }
 
                 if (property.PropertyType.In(typeof(bool), typeof(bool?)))
                 {
