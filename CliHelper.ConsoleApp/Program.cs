@@ -9,6 +9,10 @@ internal static class Program
         args = new string[] { "advanced", "index2", "5", "--name", "Jake" };
 
         var client = CliClient.Create()
+            .ConfigureOptions(options =>
+            {
+                options.DefaultCommandPrefix = "--";
+            })
             .AddControllers()
             .AddServices(services =>
             {

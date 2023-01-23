@@ -7,8 +7,14 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
 
+public class CliClientOptions
+{
+    public string DefaultCommandPrefix { get; set; }
+}
+
 public sealed class CliClient
 {
+
     /// <summary>
     /// The core collection of controller/actions that have been registered.
     /// </summary>
@@ -22,10 +28,16 @@ public sealed class CliClient
     /// </summary>
     private ControllerContext _primaryControllerOverride;
 
+    private readonly CliClientOptions _options;
+
     private CliClient()
     {
         _controllers = new List<ControllerContext>();
         _serviceCollection = new ServiceCollection();
+        _options = new CliClientOptions
+        {
+            DefaultCommandPrefix = "--"
+        };
     }
 
     private string ResolveControllerReference(ControllerContext controller)
@@ -50,7 +62,7 @@ public sealed class CliClient
     {
         var parameterReference =
             parameter.ActionParameterAttribute?.Alias
-            ?? "--" + parameter.ActionParameter.Name;
+            ?? _options.DefaultCommandPrefix + parameter.ActionParameter.Name;
 
         return parameterReference;
     }
@@ -59,7 +71,7 @@ public sealed class CliClient
     {
         var propertyReference =
             property.GetCustomAttribute<CliAttribute>()?.Alias
-            ?? "--" + property.Name;
+            ?? _options.DefaultCommandPrefix + property.Name;
 
         return propertyReference;
     }
@@ -181,6 +193,15 @@ public sealed class CliClient
     public CliClient AddServices(Action<IServiceCollection> addServices)
     {
         addServices(_serviceCollection);
+        return this;
+    }
+
+    /// <summary>
+    /// Overrides default settings for the CLI client.
+    /// </summary>
+    public CliClient ConfigureOptions(Action<CliClientOptions> configureOptoins)
+    {
+        configureOptoins(_options);
         return this;
     }
 
