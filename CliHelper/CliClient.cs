@@ -269,6 +269,8 @@ public sealed class CliClient
         else
         {
             actionParameters = new List<object>(action.Parameters.Count);
+
+            var positionalParameter = 0;
             for (var i = 0; i < action.Parameters.Count; i++)
             {
                 var parameter = action.Parameters[i];
@@ -277,19 +279,47 @@ public sealed class CliClient
                 var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(parameterReference, ra, StringComparison.OrdinalIgnoreCase));
                 if (threadMatch is null)
                 {
-                    actionParameters.Add(null);
+                    // If a named argument is not found, the first thing we want to check is a default value specified in the attribute.
+                    if (parameter.ActionParameterAttribute?.DefaultValue is not null)
+                    {
+                        actionParameters.Add(parameter.ActionParameterAttribute.DefaultValue);
+                    }
+                    // Otherwise, we want to grab the first remaining argument in the arguments list.
+                    // If nothing is found, add a null value to use the language default. (int = 0, int? = null).
+                    else
+                    {
+                        var firstValue = remainingArgs.FirstOrDefault();
+                        if (firstValue is null)
+                            actionParameters.Add(null);
+                        else
+                            actionParameters.Add(ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, firstValue));
+
+                        remainingArgs.Remove(firstValue);
+                        positionalParameter++;
+                    }
+
                     continue;
                 }
 
                 if (parameter.ActionParameter.ParameterType.In(typeof(bool), typeof(bool?)))
                 {
+                    remainingArgs.Remove(threadMatch);
                     actionParameters.Add(true);
                     continue;
                 }
 
+                Console.WriteLine("Args Before: " + string.Join(", ", remainingArgs));
+
                 var valueIndex = remainingArgs.IndexOf(threadMatch) + 1;
-                var value = ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, remainingArgs.ElementAtOrDefault(valueIndex));
-                actionParameters.Add(value);
+                var stringValue = remainingArgs.ElementAtOrDefault(valueIndex);
+
+                var convertedValue = ArgumentHelper.ConvertValue(parameter.ActionParameter.ParameterType, stringValue);
+                actionParameters.Add(convertedValue);
+
+                remainingArgs.Remove(threadMatch);
+                remainingArgs.Remove(stringValue);
+
+                Console.WriteLine("Args After: " + string.Join(", ", remainingArgs));
             }
         }
 

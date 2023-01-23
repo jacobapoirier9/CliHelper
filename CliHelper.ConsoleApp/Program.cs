@@ -6,7 +6,7 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { "advanced", "index", "--name", "Jake" };
+        args = new string[] { "advanced", "index", "5", "--name", "Jake" };
 
         var client = CliClient.Create()
             .AddControllers()
@@ -22,7 +22,7 @@ internal static class Program
 public class AdvancedController : Controller
 {
     [Cli("index")]
-    public void Index(int age, string name)
+    public void Index(string name, int age)
     {
         Console.WriteLine("Here!");
     }
