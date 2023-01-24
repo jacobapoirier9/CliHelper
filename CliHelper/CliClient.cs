@@ -31,7 +31,7 @@ public sealed class CliClient
         _serviceCollection = new ServiceCollection();
         _options = new CliClientOptions
         {
-            DefaultCommandPrefix = "--"
+            SwitchPrefix = "--"
         };
     }
 
@@ -57,7 +57,7 @@ public sealed class CliClient
     {
         var parameterReference =
             parameter.CliAttribute?.Alias
-            ?? _options.DefaultCommandPrefix + parameter.ParameterInfo.Name;
+            ?? _options.SwitchPrefix + parameter.ParameterInfo.Name;
 
         return parameterReference;
     }
@@ -66,7 +66,7 @@ public sealed class CliClient
     {
         var propertyReference =
             property.GetCustomAttribute<CliAttribute>()?.Alias
-            ?? _options.DefaultCommandPrefix + property.Name;
+            ?? _options.SwitchPrefix + property.Name;
 
         return propertyReference;
     }

@@ -11,7 +11,7 @@ internal static class Program
         var client = CliClient.Create()
             .ConfigureOptions(options =>
             {
-                options.DefaultCommandPrefix = "--";
+                options.SwitchPrefix = "--";
             })
             .AddControllers()
             .AddServices(services =>

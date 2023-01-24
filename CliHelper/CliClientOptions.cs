@@ -1,4 +1,4 @@
 ﻿public class CliClientOptions
 {
-    public string DefaultCommandPrefix { get; set; }
+    public string SwitchPrefix { get; set; }
 }
