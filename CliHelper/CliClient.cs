@@ -6,6 +6,7 @@ using System.Data.Common;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 public sealed class CliClient
 {
@@ -31,7 +32,10 @@ public sealed class CliClient
         _serviceCollection = new ServiceCollection();
         _options = new CliClientOptions
         {
-            SwitchPrefix = "--"
+            SwitchPrefix = "--",
+
+            AllowCoreLoop = true,
+            CommandInputPrefix = " >> "
         };
     }
 
@@ -217,6 +221,20 @@ public sealed class CliClient
         return RunMaster<T>(args.ToList());
     }
 
+    private void RunCoreLoop()
+    {
+        while (true)
+        {
+            Console.Write(_options.CommandInputPrefix);
+
+            var input = Console.ReadLine();
+            var matches = Regex.Matches(input, @"[\""'].+?[\""']|[^ ]+");
+            var args = matches.Select(m => m.Value.Trim(new char[] { '"', '\'' })).ToList();
+
+            RunMaster<object>(args);
+        }
+    }
+
     private T RunMaster<T>(List<string> args)
     {
         _serviceProvider = _serviceCollection.BuildServiceProvider();
@@ -227,7 +245,12 @@ public sealed class CliClient
 
         var targetController = args.ElementAtOrDefault(0);
         if (targetController is null)
-            throw new ApplicationException("Must specify a controller");
+        {
+            if (_options.AllowCoreLoop)
+                RunCoreLoop();
+            else
+                throw new ApplicationException("Must specify a controller");
+        }
 
         var controller = _controllers.FirstOrDefault(controller => string.Equals(targetController, ResolveControllerReference(controller), StringComparison.OrdinalIgnoreCase));
         if (controller is null)
@@ -235,7 +258,12 @@ public sealed class CliClient
 
         var targetAction = args.ElementAtOrDefault(1);
         if (targetAction is null)
-            throw new ApplicationException("Must specify an action");
+        {
+            if (_options.AllowCoreLoop)
+                RunCoreLoop();
+            else
+                throw new ApplicationException("Must specify an action");
+        }
 
         var action = controller.Actions.FirstOrDefault(action => string.Equals(targetAction, ResolveActionReference(action), StringComparison.OrdinalIgnoreCase));
         if (action is null)
