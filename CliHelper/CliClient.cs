@@ -312,6 +312,7 @@ public sealed class CliClient
                     else
                         actionParameters.Add(ArgumentHelper.ConvertValue(parameter.ParameterInfo.ParameterType, firstValue));
 
+                    remainingArgs.Remove(parameterReference);
                     remainingArgs.Remove(firstValue);
                     positionalParameter++;
 
