@@ -319,6 +319,7 @@ public sealed class CliClient
                     continue;
                 }
 
+                // Booleans should be treated as true if the switch is present, otherwise false (language default)
                 if (parameter.ParameterInfo.ParameterType.In(typeof(bool), typeof(bool?)))
                 {
                     remainingArgs.Remove(threadMatch);
