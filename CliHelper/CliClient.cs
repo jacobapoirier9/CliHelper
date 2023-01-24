@@ -258,27 +258,21 @@ public sealed class CliClient
                 var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(propertyReference, ra, StringComparison.OrdinalIgnoreCase));
                 if (threadMatch is null)
                 {
-                    // If a named argument is not found, the first thing we want to check is a default value specified in the attribute.
-                    if (propertyAttribute?.DefaultValue is not null)
-                    {
-                        property.SetValue(actionParameter, propertyAttribute.DefaultValue);
-                    }
-                    // Otherwise, we want to grab the first remaining argument in the arguments list.
-                    // If nothing is found, add a null value to use the language default. (int = 0, int? = null).
-                    else
-                    {
-                        var firstValue = remainingArgs.FirstOrDefault();
-                        if (firstValue is null)
-                            continue;
-                        else
-                            property.SetValue(actionParameter, ArgumentHelper.ConvertValue(property.PropertyType, firstValue));
-
-                        remainingArgs.Remove(firstValue);
-                        positionalParameter++;
+                    // Grab the first argument in the remaining arguments list as the unnamed paramter.
+                    var firstValue = remainingArgs.FirstOrDefault();
+                    if (firstValue is null)
                         continue;
-                    }
+                    else
+                        property.SetValue(actionParameter, ArgumentHelper.ConvertValue(property.PropertyType, firstValue));
+
+                    remainingArgs.Remove(propertyReference);
+                    remainingArgs.Remove(firstValue);
+                    positionalParameter++;
+
+                    continue;
                 }
 
+                // Booleans should be treated as true if the switch is present, otherwise false (language default)
                 if (property.PropertyType.In(typeof(bool), typeof(bool?)))
                 {
                     remainingArgs.Remove(threadMatch);
@@ -311,24 +305,15 @@ public sealed class CliClient
                 var threadMatch = remainingArgs.LastOrDefault(ra => string.Equals(parameterReference, ra, StringComparison.OrdinalIgnoreCase));
                 if (threadMatch is null)
                 {
-                    // If a named argument is not found, the first thing we want to check is a default value specified in the attribute.
-                    if (parameter.CliAttribute?.DefaultValue is not null)
-                    {
-                        actionParameters.Add(parameter.CliAttribute.DefaultValue);
-                    }
-                    // Otherwise, we want to grab the first remaining argument in the arguments list.
-                    // If nothing is found, add a null value to use the language default. (int = 0, int? = null).
+                    // Grab the first argument in the remaining arguments list as the unnamed paramter.
+                    var firstValue = remainingArgs.FirstOrDefault();
+                    if (firstValue is null)
+                        actionParameters.Add(null);
                     else
-                    {
-                        var firstValue = remainingArgs.FirstOrDefault();
-                        if (firstValue is null)
-                            actionParameters.Add(null);
-                        else
-                            actionParameters.Add(ArgumentHelper.ConvertValue(parameter.ParameterInfo.ParameterType, firstValue));
+                        actionParameters.Add(ArgumentHelper.ConvertValue(parameter.ParameterInfo.ParameterType, firstValue));
 
-                        remainingArgs.Remove(firstValue);
-                        positionalParameter++;
-                    }
+                    remainingArgs.Remove(firstValue);
+                    positionalParameter++;
 
                     continue;
                 }
