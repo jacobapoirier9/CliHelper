@@ -239,7 +239,6 @@ public sealed class CliClient
     {
         _serviceProvider = _serviceCollection.BuildServiceProvider();
 
-        // If action primary controller has been added, it will be inserted to the array at index [0].
         if (_primaryControllerOverride is not null)
             args.Insert(0, ResolveControllerReference(_primaryControllerOverride));
 
