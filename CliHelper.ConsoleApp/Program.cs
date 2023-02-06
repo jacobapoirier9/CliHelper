@@ -29,12 +29,6 @@ public class AdvancedController : Controller
     {
         Console.WriteLine("Here!");
     }
-
-    [Cli("index2")]
-    public void Index(Test request)
-    {
-
-    }
 }
 
 public class Test

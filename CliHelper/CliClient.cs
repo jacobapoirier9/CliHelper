@@ -35,7 +35,9 @@ public sealed class CliClient
             SwitchPrefix = "--",
 
             AllowCoreLoop = true,
-            CommandInputPrefix = " >> "
+            CommandInputPrefix = " >> ",
+
+            AllowImplicitActionSelection = true
         };
     }
 
@@ -266,7 +268,12 @@ public sealed class CliClient
 
         var action = controller.Actions.FirstOrDefault(action => string.Equals(targetAction, ResolveActionReference(action), StringComparison.OrdinalIgnoreCase));
         if (action is null)
-            throw new ApplicationException($"No action found with criteria {targetAction}");
+        {
+            if (_options.AllowImplicitActionSelection && controller.Actions.Count == 1)
+                action = controller.Actions[0];
+            else
+                throw new ApplicationException($"No action found with criteria {targetAction}");
+        }
 
         var actionParameters = default(List<object>);
         var remainingArgs = args.GetRange(2, args.Count - 2);
