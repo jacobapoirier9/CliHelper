@@ -1,18 +1,16 @@
 ﻿using CliHelper;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 
 internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { "advanced", "index2", "5", "--name", "Jake" };
+        args = new string[] { };
 
         var client = CliClient.Create()
-            .ConfigureOptions(options =>
-            {
-                options.DefaultCommandPrefix = "--";
-            })
             .AddControllers()
             .AddServices(services =>
             {
@@ -20,6 +18,7 @@ internal static class Program
             .Run(args);
 
     }
+
 }
 
 [Cli("advanced")]
