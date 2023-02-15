@@ -4,17 +4,6 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        //using (var reader = Console.In)
-        //{
-        //    var text = reader.ReadToEnd();
-        //    Console.WriteLine(text);
-        //}
-
-        args = new string[]
-        {
-            "advanced", "--name Jake --bool"
-        };
-
         var client = Client.Create()
             .AddControllers()
             .Run(args);
@@ -24,9 +13,18 @@ internal static class Program
 [Cli("advanced")]
 public class AdvancedController : Controller
 {
-    public void Index()
+    public void Index(Execute execute)
     {
-        Console.WriteLine("Here!");
+        using (var reader = execute.TextReader)
+        {
+            var text = reader.ReadToEnd();
+            Console.WriteLine(text);
+        }
     }
 
+}
+
+public class Execute
+{
+    public TextReader TextReader { get; set; }
 }

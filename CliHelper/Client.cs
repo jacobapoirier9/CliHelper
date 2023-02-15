@@ -198,7 +198,8 @@ public sealed class Client
             if (parameter.ParameterType.In(
                 typeof(bool), typeof(bool?), typeof(string), typeof(TimeSpan), typeof(TimeSpan?), typeof(DateTime), typeof(DateTime?),
                 typeof(byte), typeof(byte?), typeof(short), typeof(short?), typeof(int), typeof(int?), typeof(long), typeof(long?),
-                typeof(double), typeof(double?), typeof(float), typeof(float?), typeof(decimal), typeof(decimal?)
+                typeof(double), typeof(double?), typeof(float), typeof(float?), typeof(decimal), typeof(decimal?),
+                typeof(TextReader)
             ))
             {
                 value = ExtractTargetArgument(attribute?.Alias ?? parameter.Name, parameter.ParameterType, ref args);
@@ -321,6 +322,8 @@ public sealed class Client
 
                 return converted;
             }
+            else if (targetType == typeof(TextReader))
+                return Console.In;
 
             return null;
         }

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CliHelper.ConsoleApp": {
+      "commandName": "Project",
+      "commandLineArgs": "< \"D:\\MyDev\\CliHelper\\CliHelper.ConsoleApp\\bin\\Debug\\net6.0\\CommandHelpers.dll\""
+    }
+  }
+}
