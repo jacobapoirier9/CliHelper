@@ -1,4 +1,6 @@
-﻿public static class Extensions
+﻿namespace CliHelper;
+
+public static class Extensions
 {
     internal static bool In<T>(this T instance, params T[] items)
     {
