@@ -192,26 +192,17 @@ public sealed class Client
         {
             var parameter = parameters[i];
             var attribute = parameter.GetCustomAttribute<CliAttribute>();
-            var value = default(object);
 
-            // If we have explicitly defined how to parse and assign a typed parameter, it must be listed here.
-            if (parameter.ParameterType.In(
-                typeof(bool), typeof(bool?), typeof(string), typeof(TimeSpan), typeof(TimeSpan?), typeof(DateTime), typeof(DateTime?),
-                typeof(byte), typeof(byte?), typeof(short), typeof(short?), typeof(int), typeof(int?), typeof(long), typeof(long?),
-                typeof(double), typeof(double?), typeof(float), typeof(float?), typeof(decimal), typeof(decimal?),
-                typeof(TextReader)
-            ))
+            var value = ExtractTargetArgument(attribute?.Alias ?? parameter.Name, parameter.ParameterType, ref args);
+            if (value is null)
             {
-                value = ExtractTargetArgument(attribute?.Alias ?? parameter.Name, parameter.ParameterType, ref args);
-            }
-            // Otherwise, this will assume it is a user defined strongly typed request DTO
-            else
-            {
-                value = BindArguments(parameter.ParameterType, ref args);
+                if (parameter.ParameterType == typeof(TextReader))
+                    value = Console.In;
+                else
+                    value = BindArguments(parameter.ParameterType, ref args);
             }
 
-            if (value is not null)
-                result[i] = value;
+            result[i] = value;
         }
 
         return result;
@@ -322,8 +313,6 @@ public sealed class Client
 
                 return converted;
             }
-            else if (targetType == typeof(TextReader))
-                return Console.In;
 
             return null;
         }
