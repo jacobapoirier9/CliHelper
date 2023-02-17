@@ -19,6 +19,7 @@ public sealed class Client
 
     // ENDTEMP
 
+    #region Client Building
     private Client()
     {
         _configuration = new Configuration()
@@ -30,6 +31,13 @@ public sealed class Client
         };
         _serviceCollection = new ServiceCollection();
     }
+
+    public static Client Create()
+    {
+        var client = new Client();
+        return client;
+    }
+    #endregion
 
     #region Adding Command Controllers/Modules
     /// <summary>
@@ -258,11 +266,6 @@ public sealed class Client
         }
     }
 
-    public static Client Create()
-    {
-        var client = new Client();
-        return client;
-    }
 
     private static readonly string[] _trueStringValues = new string[] { "true", "yes", "y", "1" };
     private static readonly string[] _falseStringValues = new string[] { "false", "no", "n", "0" };
