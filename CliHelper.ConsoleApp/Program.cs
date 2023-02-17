@@ -7,19 +7,19 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { "help" };
+        args = new string[] {  };
 
         var client = Client.Create()
             .AddControllers()
+            .AddControllers(typeof(ControllerOne))
             .Configure(options =>
             {
-                options.InteractiveShellBanner = "Welcome to interactive shell";
             })
             .Run(args);
     }
 }
 
-public class ControllerOne : Controller
+public class ControllerOne
 {
     public void IndexOne()
     {

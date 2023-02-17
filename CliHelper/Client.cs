@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using CliHelper.Services;
+using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel.Design;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -6,17 +8,19 @@ namespace CliHelper;
 
 public sealed class Client
 {
-    private readonly List<CommandContext> _commandContexts;
-
-    private bool _hadAddedControllers;
     private readonly Configuration _configuration;
 
     private readonly IServiceCollection _serviceCollection;
     private IServiceProvider _serviceProvider;
 
+    // TEMP
+    // Could this be added as an item registration?
+    private readonly ICommandContextProvider _commandContextProvider = new CommandContextProvider();
+
+    // ENDTEMP
+
     private Client()
     {
-        _commandContexts = new List<CommandContext>();
         _configuration = new Configuration()
         {
             RequireControllerName = false,
@@ -27,60 +31,38 @@ public sealed class Client
         _serviceCollection = new ServiceCollection();
     }
 
-    private void RegisterType(Type type)
-    {
-        if (!type.IsSubclassOf(typeof(Controller)))
-            throw new NotImplementedException($"{type.Name} must inherit from base class {typeof(Controller)}");
-
-        var typeAttribute = type.GetCustomAttribute<CliAttribute>();
-
-        foreach (var method in type.GetMethods().Where(m => m.IsPublic && m.DeclaringType == type && !m.IsSpecialName))
-        {
-            var methodAttribute = method.GetCustomAttribute<CliAttribute>();
-
-            var commandContext = new CommandContext
-            {
-                Type = type,
-                TypeAttribute = typeAttribute,
-                Method = method,
-                MethodAttribute = methodAttribute
-            };
-
-            _commandContexts.Add(commandContext);
-            _serviceCollection.AddTransient(type);
-        }
-    }
-
+    #region Adding Command Controllers/Modules
+    /// <summary>
+    /// Searches <paramref name="assembly"/> for all types that inherit <see cref="Controller"/> and adds to the command collection.
+    /// </summary>
+    /// <param name="assembly">Target assembly to search</param>
+    /// <returns></returns>
     public Client AddControllers(Assembly assembly = null)
     {
-        if (_hadAddedControllers)
-            throw new ApplicationException($"Controller have already been added.");
-
         if (assembly is null)
             assembly = Assembly.GetCallingAssembly();
 
-        foreach (var type in assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Controller))))
-        {
-            RegisterType(type);
-        }
+        var controllerTypes = assembly.GetTypes().Where(t => t.IsSubclassOf(typeof(Controller))).ToArray();
+        AddControllers(controllerTypes);
 
-        _hadAddedControllers = true;
         return this;
     }
 
+    /// <summary>
+    /// Adds all types in <paramref name="types"/> to the command collection.
+    /// </summary>
+    /// <param name="types"></param>
     public Client AddControllers(params Type[] types)
     {
-        if (_hadAddedControllers)
-            throw new ApplicationException($"Controller have already been added.");
-
         foreach (var type in types)
         {
-            RegisterType(type);
+            _serviceCollection.AddTransient(type);
+            _commandContextProvider.RegisterCommandContexts(type);
         }
 
-        _hadAddedControllers = true;
         return this;
     }
+    #endregion
 
     public Client Configure(Action<Configuration> configure)
     {
@@ -96,9 +78,8 @@ public sealed class Client
 
     public Client Run(string[] args)
     {
-        _serviceCollection.AddSingleton(_commandContexts);
-        RegisterType(typeof(DefaultController));
-
+        AddControllers(typeof(DefaultController));
+        _serviceCollection.AddSingleton(_commandContextProvider.CommandContexts);
         _serviceProvider = _serviceCollection.BuildServiceProvider();
 
         if (args.Any())
@@ -119,22 +100,32 @@ public sealed class Client
 
         do
         {
-            Console.Write(_configuration.InteractiveShellPrompt);
+            try
+            {
+                Console.Write(_configuration.InteractiveShellPrompt);
 
-            var args = Console.ReadLine();
-            HandleCommandExecution<object>(args);
+                var args = Console.ReadLine();
+                HandleCommandExecution<object>(args);
+            }
+            catch(Exception ex) // TODO: allows clients to handle the exception thrown here?
+            {
+                Console.WriteLine("Invalid command");
+            }
         } while (true);
     }
 
     private T HandleCommandExecution<T>(string[] args) => HandleCommandExecution<T>(string.Join(' ', args));
     private T HandleCommandExecution<T>(string args)
     {
-        var commandContext = ExtractCommandContext(ref args);
+        var commandContext = _commandContextProvider.ExtractCommandContext(ref args, _configuration);
         var instance = _serviceProvider.GetRequiredService(commandContext.Type);
 
-        var selectedCommandContextProperty = typeof(Controller).GetProperty(nameof(Controller.SelectedCommandContext));
-        selectedCommandContextProperty.SetValue(instance, commandContext);
-        
+        if (commandContext.Type.IsSubclassOf(typeof(Controller)))
+        {
+            var selectedCommandContextProperty = typeof(Controller).GetProperty(nameof(Controller.SelectedCommandContext));
+            selectedCommandContextProperty.SetValue(instance, commandContext);
+        }
+
         var parameters = ExtractMethodParameters(commandContext.Method, ref args);
         var output = commandContext.Method.Invoke(instance, parameters);
 
@@ -150,46 +141,6 @@ public sealed class Client
         }
         else
             return (T)output;
-    }
-
-    private CommandContext ExtractCommandContext(ref string args)
-    {
-        var registeredTypes = _commandContexts.Select(r => r.TypeAttribute?.Alias ?? r.Type.Name).OrderByDescending(r => r.Length).ToList();
-        var registeredMethods = _commandContexts.Select(r => r.MethodAttribute?.Alias ?? r.Method.Name).OrderByDescending(r => r.Length).ToList();
-
-        // TODO: Regex should handle requirements
-        // Regex: ^(?<Controller>controller)? *(?<Action>action)? *
-        var regex = new Regex($"^(?<Controller>{string.Join('|', registeredTypes)})? *(?<Action>{string.Join('|', registeredMethods)})? *", RegexOptions.IgnoreCase);
-        var match = regex.Match(args);
-
-        if (match.Success)
-        {
-            args = regex.Replace(args, m => string.Empty);
-
-            var controller = match.Groups["Controller"].Value;
-            if (_configuration.RequireControllerName && string.IsNullOrEmpty(controller))
-                throw new ApplicationException("Must provide a valid controller name");
-
-            var action = match.Groups["Action"].Value;
-            if (_configuration.RequireActionName && string.IsNullOrEmpty(action))
-                throw new ApplicationException("Must provide a valid action name");
-
-            var filtered = _commandContexts.ToList(); // Effectively make a copy of the command contexts list
-
-            if (!string.IsNullOrEmpty(controller))
-                filtered = filtered.Where(r => string.Equals(r.TypeAttribute?.Alias ?? r.Type.Name, controller, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (!string.IsNullOrEmpty(action))
-                filtered = filtered.Where(r => string.Equals(r.MethodAttribute?.Alias ?? r.Method.Name, action, StringComparison.OrdinalIgnoreCase)).ToList();
-
-            if (!filtered.Any())
-                throw new ApplicationException("Could not find any actions");
-            else if (filtered.Count == 1)
-                return filtered.First();
-            else
-                throw new ApplicationException("Could not find a single action");
-        }
-        else
-            throw new ApplicationException("Could not find any action");
     }
 
     /// <summary>
