@@ -181,7 +181,7 @@ public sealed class Client
     /// <summary>
     /// If the service collection contains an item of type <paramref name="targetType"/>, it will return the instance. Otherwise, it will return an instance using the default constructor.
     /// </summary>
-    internal object ExtractInstance(Type targetType, ref string args)
+    internal object ExtractStronglyTypedInstance(Type targetType, ref string args)
     {
         if (_serviceProvider is null)
             _serviceProvider = _serviceCollection.BuildServiceProvider();
@@ -191,7 +191,7 @@ public sealed class Client
         {
             var attribute = property.GetCustomAttribute<CliAttribute>();
 
-            var value = ExtractArgument(attribute?.Alias ?? property.Name, property.PropertyType, ref args);
+            var value = ExtractSimpleTypeInstance(attribute?.Alias ?? property.Name, property.PropertyType, ref args);
             if (value is null)
                 value = ExtractSpecialInstance(property.PropertyType);
 
@@ -218,12 +218,12 @@ public sealed class Client
             var parameter = parameters[i];
             var attribute = parameter.GetCustomAttribute<CliAttribute>();
 
-            var value = ExtractArgument(attribute?.Alias ?? parameter.Name, parameter.ParameterType, ref args);
+            var value = ExtractSimpleTypeInstance(attribute?.Alias ?? parameter.Name, parameter.ParameterType, ref args);
             if (value is null)
                 value = ExtractSpecialInstance(parameter.ParameterType);
 
             if (value is null)
-                value = ExtractInstance(parameter.ParameterType, ref args);
+                value = ExtractStronglyTypedInstance(parameter.ParameterType, ref args);
 
             result[i] = value;
         }
@@ -234,7 +234,7 @@ public sealed class Client
     /// <summary>
     /// Uses regex to parse through <paramref name="args"/> for key/value pair <paramref name="targetName"/> and converts the result to <paramref name="targetType"/>
     /// </summary>
-    internal object ExtractArgument(string targetName, Type targetType, ref string args)
+    internal object ExtractSimpleTypeInstance(string targetName, Type targetType, ref string args)
     {
         // TODO: Parse Anonymous Parameters?
         // Boolean Regex:       (?<Prefix>--|\/)(?<ArgumentName>[\w-]*)(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>false|true|yes|no|y|n)?|$)
@@ -259,7 +259,7 @@ public sealed class Client
 
                 // The boolean switch is present, and has been provided a value.
                 if (group.Success)
-                    return MasterConvert(targetType, group.Value);
+                    return MasterConvertSimpleType(targetType, group.Value);
                 // The boolean switch is present, and has not been provided a value.
                 else
                     return true;
@@ -279,7 +279,7 @@ public sealed class Client
 
                 var group = match.Groups["ArgumentValue"];
                 var stringValue = group.Value.Trim('\'', '"', ' ');
-                var converted = MasterConvert(targetType, stringValue);
+                var converted = MasterConvertSimpleType(targetType, stringValue);
                 return converted;
             }
 
@@ -300,7 +300,7 @@ public sealed class Client
     /// Converts <paramref name="stringValue"/> to <paramref name="targetType"/>.
     /// </summary>
     /// <exception cref="InvalidCastException"></exception>
-    private static object MasterConvert(Type targetType, string stringValue)
+    private static object MasterConvertSimpleType(Type targetType, string stringValue)
     {
         var converted = default(object);
 
