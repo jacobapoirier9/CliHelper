@@ -25,7 +25,7 @@ public class ClientArgumentBinderTests
     {
         var client = Client.Create();
         var argsAsString = string.Join(' ', _args);
-        var request = client.BindArguments(typeof(Request), ref argsAsString) as Request;
+        var request = client.ExtractInstance(typeof(Request), ref argsAsString) as Request;
         return request;
     }
 

@@ -114,7 +114,7 @@ public sealed class Client
         var registration = ExtractRegistration(ref args);
         var instance = _serviceProvider.GetRequiredService(registration.Type);
 
-        var parameters = BindArguments(registration.Method, ref args);
+        var parameters = ExtractMethodParameters(registration.Method, ref args);
         var output = registration.Method.Invoke(instance, parameters);
 
         if (output is Task emptyTask)
@@ -166,17 +166,38 @@ public sealed class Client
             throw new ApplicationException("Could not find any action");
     }
 
-    internal object BindArguments(Type type, ref string args)
+    /// <summary>
+    /// If <paramref name="targetType"/> has a special implementation defined in this library, it will return an instance. Otherwise, it will return null.
+    /// </summary>
+    internal object ExtractSpecialInstance(Type targetType)
+    {
+        if (targetType == typeof(TextReader))
+            return Console.In;
+
+        else
+            return null;
+    }
+
+    /// <summary>
+    /// If the service collection contains an item of type <paramref name="targetType"/>, it will return the instance. Otherwise, it will return an instance using the default constructor.
+    /// </summary>
+    internal object ExtractInstance(Type targetType, ref string args)
     {
         if (_serviceProvider is null)
             _serviceProvider = _serviceCollection.BuildServiceProvider();
 
-        var instance = _serviceProvider.GetService(type) ?? Activator.CreateInstance(type);
-
-        foreach (var property in type.GetProperties())
+        var instance = _serviceProvider.GetService(targetType) ?? Activator.CreateInstance(targetType);
+        foreach (var property in targetType.GetProperties())
         {
             var attribute = property.GetCustomAttribute<CliAttribute>();
-            var value = ExtractTargetArgument(attribute?.Alias ?? property.Name, property.PropertyType, ref args);
+
+            var value = ExtractArgument(attribute?.Alias ?? property.Name, property.PropertyType, ref args);
+            if (value is null)
+                value = ExtractSpecialInstance(property.PropertyType);
+
+            if (value is null)
+                value = ExtractInstance(property.PropertyType, ref args);
+
             if (value is not null)
                 property.SetValue(instance, value);
         }
@@ -184,23 +205,28 @@ public sealed class Client
         return instance;
     }
 
-    internal object[] BindArguments(MethodInfo method, ref string args)
+    /// <summary>
+    /// Returns an array of parameters that should be passed to the <see cref="MethodInfo"/>, which is determined in a previous step.
+    /// </summary>
+    /// <param name="method"></param>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    internal object[] ExtractMethodParameters(MethodInfo method, ref string args)
     {
         var parameters = method.GetParameters();
         var result = new object[parameters.Length];
+
         for (var i = 0; i < parameters.Length; i++)
         {
             var parameter = parameters[i];
             var attribute = parameter.GetCustomAttribute<CliAttribute>();
 
-            var value = ExtractTargetArgument(attribute?.Alias ?? parameter.Name, parameter.ParameterType, ref args);
+            var value = ExtractArgument(attribute?.Alias ?? parameter.Name, parameter.ParameterType, ref args);
             if (value is null)
-            {
-                if (parameter.ParameterType == typeof(TextReader))
-                    value = Console.In;
-                else
-                    value = BindArguments(parameter.ParameterType, ref args);
-            }
+                value = ExtractSpecialInstance(parameter.ParameterType);
+
+            if (value is null)
+                value = ExtractInstance(parameter.ParameterType, ref args);
 
             result[i] = value;
         }
@@ -208,39 +234,38 @@ public sealed class Client
         return result;
     }
 
-    // TODO: Parse Anonymous Parameters?
-    // Boolean Regex:       (?<Prefix>--|\/)(?<ArgumentName>[\w-]*)(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>false|true|yes|no|y|n)?|$)
-    // Named Regex:         (?<Prefix>--|\/)(?<ArgumentName>[\w-]*)(?<ArgumentNameTerminator>[\s:=]+)(?<ArgumentValue>[\w:\\.-]+|"[\w\s:\\.-]*"|'[\w\s:\\.-]*')
-    // Anonymous Regex:     (?<AnonymousArgument>[\w:\\.-]+|"[\w\s:\\.-]*"|'[\w\s:\\.-]*')
-    internal object ExtractTargetArgument(string targetName, Type targetType, ref string args)
+    /// <summary>
+    /// Uses regex to parse through <paramref name="args"/> for key/value pair <paramref name="targetName"/> and converts the result to <paramref name="targetType"/>
+    /// </summary>
+    internal object ExtractArgument(string targetName, Type targetType, ref string args)
     {
+        // TODO: Parse Anonymous Parameters?
+        // Boolean Regex:       (?<Prefix>--|\/)(?<ArgumentName>[\w-]*)(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>false|true|yes|no|y|n)?|$)
+        // Named Regex:         (?<Prefix>--|\/)(?<ArgumentName>[\w-]*)(?<ArgumentNameTerminator>[\s:=]+)(?<ArgumentValue>[\w:\\.-]+|"[\w\s:\\.-]*"|'[\w\s:\\.-]*')
+        // Anonymous Regex:     (?<AnonymousArgument>[\w:\\.-]+|"[\w\s:\\.-]*"|'[\w\s:\\.-]*')
+
         // TODO: How should boolean values be parsed?
         // Option 1 is to use switch presence as an indicator to set to true.
         // Option 2 is to use values such as Y/N to set to true/false accordingly.
         if (targetType == typeof(bool) || targetType == typeof(bool?))
         {
-            // Allowable true/false values need to be configured during client building.
-            var regex = new Regex($@"(?<Prefix>--|\/)(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>false|true|yes|no|y|n)?|$)", RegexOptions.IgnoreCase);
+            var booleanValues = _trueStringValues.Concat(_falseStringValues).OrderBy(s => s.Length).ToList();
+            var regex = new Regex($@"(?<Prefix>--|\/)(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>{string.Join('|', booleanValues)})?|$)", RegexOptions.IgnoreCase);
             var match = regex.Match(args);
 
+            // The boolean switch is present.
             if (match.Success)
             {
                 args = regex.Replace(args, m => string.Empty);
 
                 var group = match.Groups["ArgumentValue"];
+
+                // The boolean switch is present, and has been provided a value.
                 if (group.Success)
-                {
-                    var value = group.Value.ToLower();
-                    if (value.In("true", "yes", "y"))
-                        return true;
-                    else if (value.In("false", "no", "n")) // TODO: This could probably be an else, since the regex should not return a successful match if the option is not listed.
-                        return false;
-                    else
-                        return null;
-                }
+                    return MasterConvert(targetType, group.Value);
+                // The boolean switch is present, and has not been provided a value.
                 else
                     return true;
-
             }
             else
                 return null;
@@ -257,60 +282,7 @@ public sealed class Client
 
                 var group = match.Groups["ArgumentValue"];
                 var stringValue = group.Value.Trim('\'', '"', ' ');
-                var converted = default(object);
-
-                if (targetType == typeof(string))
-                    converted = stringValue;
-
-
-
-                else if (targetType == typeof(byte))
-                    converted = byte.Parse(stringValue);
-                else if (targetType == typeof(byte?))
-                    converted = byte.TryParse(stringValue, out var outValue) ? outValue : null;
-
-                else if (targetType == typeof(short))
-                    converted = short.Parse(stringValue);
-                else if (targetType == typeof(short?))
-                    converted = short.TryParse(stringValue, out var outValue) ? outValue : null;
-
-                else if (targetType == typeof(int))
-                    converted = int.Parse(stringValue);
-                else if (targetType == typeof(int?))
-                    converted = int.TryParse(stringValue, out var outValue) ? outValue : null;
-
-                else if (targetType == typeof(long))
-                    converted = long.Parse(stringValue);
-                else if (targetType == typeof(long?))
-                    converted = long.TryParse(stringValue, out var outValue) ? outValue : null;
-
-                else if (targetType == typeof(double))
-                    converted = double.Parse(stringValue);
-                else if (targetType == typeof(double?))
-                    converted = double.TryParse(stringValue, out var outValue) ? outValue : null;
-
-                else if (targetType == typeof(float))
-                    converted = float.Parse(stringValue);
-                else if (targetType == typeof(float?))
-                    converted = float.TryParse(stringValue, out var outValue) ? outValue : null;
-
-                else if (targetType == typeof(decimal))
-                    converted = decimal.Parse(stringValue);
-                else if (targetType == typeof(decimal?))
-                    converted = decimal.TryParse(stringValue, out var outValue) ? outValue : null;
-
-
-
-                else if (targetType == typeof(TimeSpan))
-                    converted = TimeSpan.Parse(stringValue);
-                else if (targetType == typeof(TimeSpan?))
-                    converted = TimeSpan.TryParse(stringValue, out var outValue) ? outValue : null;
-
-                else if (targetType == typeof(DateTime))
-                    converted = DateTime.Parse(stringValue);
-                else if (targetType == typeof(DateTime?))
-                    converted = DateTime.TryParse(stringValue, out var outValue) ? outValue : null;
-
+                var converted = MasterConvert(targetType, stringValue);
                 return converted;
             }
 
@@ -322,5 +294,79 @@ public sealed class Client
     {
         var client = new Client();
         return client;
+    }
+
+    private static readonly string[] _trueStringValues = new string[] { "true", "yes", "y", "1" };
+    private static readonly string[] _falseStringValues = new string[] { "false", "no", "n", "0" };
+
+    /// <summary>
+    /// Converts <paramref name="stringValue"/> to <paramref name="targetType"/>.
+    /// </summary>
+    /// <exception cref="InvalidCastException"></exception>
+    private static object MasterConvert(Type targetType, string stringValue)
+    {
+        var converted = default(object);
+
+        if (targetType == typeof(string))
+            converted = stringValue;
+
+        if (targetType == typeof(bool) || targetType == typeof(bool?))
+        {
+            var lower = stringValue.ToLower();
+
+            if (_trueStringValues.Contains(lower))
+                converted = true;
+            else if (_falseStringValues.Contains(lower))
+                converted = false;
+            else
+                throw new InvalidCastException($"Could not convert {stringValue} to {targetType}");
+        }
+
+        else if (targetType == typeof(byte))
+            converted = byte.Parse(stringValue);
+        else if (targetType == typeof(byte?))
+            converted = byte.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        else if (targetType == typeof(short))
+            converted = short.Parse(stringValue);
+        else if (targetType == typeof(short?))
+            converted = short.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        else if (targetType == typeof(int))
+            converted = int.Parse(stringValue);
+        else if (targetType == typeof(int?))
+            converted = int.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        else if (targetType == typeof(long))
+            converted = long.Parse(stringValue);
+        else if (targetType == typeof(long?))
+            converted = long.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        else if (targetType == typeof(double))
+            converted = double.Parse(stringValue);
+        else if (targetType == typeof(double?))
+            converted = double.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        else if (targetType == typeof(float))
+            converted = float.Parse(stringValue);
+        else if (targetType == typeof(float?))
+            converted = float.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        else if (targetType == typeof(decimal))
+            converted = decimal.Parse(stringValue);
+        else if (targetType == typeof(decimal?))
+            converted = decimal.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        else if (targetType == typeof(TimeSpan))
+            converted = TimeSpan.Parse(stringValue);
+        else if (targetType == typeof(TimeSpan?))
+            converted = TimeSpan.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        else if (targetType == typeof(DateTime))
+            converted = DateTime.Parse(stringValue);
+        else if (targetType == typeof(DateTime?))
+            converted = DateTime.TryParse(stringValue, out var outValue) ? outValue : null;
+
+        return converted;
     }
 }
