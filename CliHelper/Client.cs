@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using CliHelper.Services;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.ComponentModel.Design;
 using System.Reflection;
@@ -101,72 +102,13 @@ public sealed class Client
         _serviceCollection.AddSingleton(_configuration);
         _serviceCollection.AddSingleton(_commandContexts);
         _serviceCollection.AddSingleton<IArgumentService, ArgumentService>();
+        _serviceCollection.AddSingleton<ICommandService, CommandService>();
 
         _serviceProvider = _serviceCollection.BuildServiceProvider();
 
-        if (args.Any())
-            HandleCommandExecution<object>(args);
-        else
-            HandleCommandShell();
+        var shellService = _serviceProvider.GetRequiredService<ICommandService>();
+        shellService.HandleInputString(string.Join(' ', args));
 
         return this;
-    }
-
-    private void HandleCommandShell()
-    {
-        if (_configuration.InteractiveShellBanner is not null)
-            Console.WriteLine(_configuration.InteractiveShellBanner);
-
-        if (_configuration.DisableInteractiveShell)
-            throw new ApplicationException("Interactive shell has been disabled. No arguments were passed to the application.");
-
-        do
-        {
-            try
-            {
-                Console.Write(_configuration.InteractiveShellPrompt);
-
-                var args = Console.ReadLine();
-                HandleCommandExecution<object>(args);
-            }
-            catch(Exception ex) // TODO: allows clients to handle the exception thrown here?
-            {
-                Console.WriteLine("Invalid command");
-            }
-        } while (true);
-    }
-
-    private T HandleCommandExecution<T>(string[] args) => HandleCommandExecution<T>(string.Join(' ', args));
-    private T HandleCommandExecution<T>(string args)
-    {
-        var argumentParser = _serviceProvider.GetRequiredService<IArgumentService>();
-
-        var commandContext = argumentParser.ExtractCommandContext(ref args);
-        var instance = _serviceProvider.GetRequiredService(commandContext.Type);
-
-        if (commandContext.Type.IsSubclassOf(typeof(Controller)))
-        {
-            var selectedCommandContextProperty = typeof(Controller).GetProperty(nameof(Controller.SelectedCommandContext));
-            selectedCommandContextProperty.SetValue(instance, commandContext);
-
-            var configurationProperty = typeof(Controller).GetProperty(nameof(Controller.Configuration));
-            configurationProperty.SetValue(instance, _configuration);
-        }
-
-        var parameters = argumentParser.ExtractMethodParameters(commandContext.Method, ref args);
-        var output = commandContext.Method.Invoke(instance, parameters);
-
-        if (output is Task emptyTask)
-        {
-            emptyTask.Wait();
-            return default(T);
-        }
-        else if (output is Task<T> typedTask)
-        {
-            typedTask.Wait();
-            return typedTask.Result;
-        }
-        else
-            return (T)output;
     }
 }
