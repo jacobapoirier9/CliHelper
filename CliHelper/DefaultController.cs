@@ -1,6 +1,6 @@
 ﻿namespace CliHelper;
 
-internal class DefaultController : Controller
+internal sealed class DefaultController : Controller
 {
     private readonly List<CommandContext> _commandContexts;
     public DefaultController(List<CommandContext> commandContexts)

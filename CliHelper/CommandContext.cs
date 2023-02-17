@@ -1,7 +1,7 @@
 ﻿using CliHelper;
 using System.Reflection;
 
-public class CommandContext
+public sealed class CommandContext
 {
     public Type Type { get; set; }
 

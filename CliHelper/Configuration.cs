@@ -1,6 +1,6 @@
 ﻿namespace CliHelper;
 
-public class Configuration
+public sealed class Configuration
 {
     /// <summary>
     /// Throw an exception if a registered action name was not specified in the shell.
