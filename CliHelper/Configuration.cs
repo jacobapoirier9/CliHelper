@@ -2,8 +2,14 @@
 
 public class Configuration
 {
+    /// <summary>
+    /// Throw an exception if a registered action name was not specified in the shell.
+    /// </summary>
     public bool RequireControllerName { get; set; }
 
+    /// <summary>
+    /// Throw an exception if a registered controller name was not specified in the shell.
+    /// </summary>
     public bool RequireActionName { get; set; }
 
     /// <summary>
@@ -12,8 +18,7 @@ public class Configuration
     public bool DisableInteractiveShell { get; set; }
 
     /// <summary>
-    /// Shell prompt
-    /// https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/prompt
+    /// Adjust the prompt shown for each command line. <see cref="DisableInteractiveShell"/> must be set to false in order for this to work.
     /// </summary>
     public string InteractiveShellPrompt { get; set; }
 }
