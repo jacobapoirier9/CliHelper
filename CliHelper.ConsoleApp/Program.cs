@@ -4,13 +4,12 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { "controllerone" };
+        args = new string[] {  };
 
         var client = Client.Create()
             .AddControllers()
             .Configure(options =>
             {
-                options.RequireActionName = true;
             })
             .Run(args);
     }

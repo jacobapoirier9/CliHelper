@@ -26,7 +26,8 @@ public sealed class Client
         _configuration = new Configuration()
         {
             RequireControllerName = false,
-            RequireActionName = false
+            RequireActionName = false,
+            DisableInteractiveShell = false
         };
         _serviceCollection = new ServiceCollection();
     }
@@ -114,9 +115,12 @@ public sealed class Client
 
     private void HandleCommandShell()
     {
+        if (_configuration.DisableInteractiveShell)
+            throw new ApplicationException("Interactive shell has been disabled. No arguments were passed to the application.");
+
         do
         {
-            Console.WriteLine(" > ");
+            Console.Write(" > ");
             var args = Console.ReadLine();
 
             var argsAsString = string.Join(' ', args);
