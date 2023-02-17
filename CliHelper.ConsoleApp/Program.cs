@@ -13,7 +13,7 @@ internal static class Program
             .AddControllers()
             .Configure(options =>
             {
-                options.InteractiveShellPrompt = "";
+                options.InteractiveShellBanner = "Welcome to interactive shell";
             })
             .Run(args);
     }

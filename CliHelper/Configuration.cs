@@ -21,4 +21,9 @@ public class Configuration
     /// Adjust the prompt shown for each command line. <see cref="DisableInteractiveShell"/> must be set to false in order for this to work.
     /// </summary>
     public string InteractiveShellPrompt { get; set; }
+
+    /// <summary>
+    /// Adjust the banner shown at the start of a command line session.
+    /// </summary>
+    public string InteractiveShellBanner { get; set; }
 }

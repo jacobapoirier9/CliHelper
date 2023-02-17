@@ -116,6 +116,9 @@ public sealed class Client
 
     private void HandleCommandShell()
     {
+        if (_configuration.InteractiveShellBanner is not null)
+            Console.WriteLine(_configuration.InteractiveShellBanner);
+
         if (_configuration.DisableInteractiveShell)
             throw new ApplicationException("Interactive shell has been disabled. No arguments were passed to the application.");
 
