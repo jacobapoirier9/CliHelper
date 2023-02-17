@@ -7,7 +7,7 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { "indextwo" };
+        args = new string[] { };
 
         var client = Client.Create()
             .AddControllers()
@@ -31,8 +31,6 @@ public class ControllerTwo : Controller
 {
     public void IndexTwo()
     {
-        var result = UserChoice("Hello");
-        Console.WriteLine(result);
         Console.WriteLine("two");
     }
 }

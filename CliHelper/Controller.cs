@@ -31,7 +31,7 @@ public abstract class Controller
             if (match.Success)
             {
                 var group = match.Groups["Response"];
-                result = (bool)Client.MasterConvertSimpleType(typeof(bool), group.Value);
+                result = (bool)ArgumentService.MasterConvertSimpleType(typeof(bool), group.Value);
                 break;
             }
         } while (match is null || !match.Success);
