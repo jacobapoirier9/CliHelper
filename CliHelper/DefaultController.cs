@@ -21,7 +21,7 @@ internal class DefaultController : Controller
             var firstRegistration = _registrations.First(r => r.Type == group.Key);
             Console.WriteLine(firstRegistration?.TypeAttribute?.Alias ?? firstRegistration.Type.Name);
 
-            foreach (var registration in group)
+            foreach (var registration in group.OrderBy(r => r.Method.Name))
             {
                 Console.Write("  ");
                 Console.WriteLine(registration?.MethodAttribute?.Alias ?? registration.Method.Name);
