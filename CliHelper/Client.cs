@@ -15,7 +15,7 @@ public sealed class Client
     private readonly List<Registration> _registrations;
 
     private bool _hadAddedControllers;
-    private readonly InputConfiguration _inputConfiguration;
+    private readonly Configuration _configuration;
 
     private readonly IServiceCollection _serviceCollection;
     private IServiceProvider _serviceProvider;
@@ -23,7 +23,7 @@ public sealed class Client
     private Client()
     {
         _registrations = new List<Registration>();
-        _inputConfiguration = new InputConfiguration()
+        _configuration = new Configuration()
         {
             RequireControllerName = false,
             RequireActionName = false
@@ -86,9 +86,9 @@ public sealed class Client
         return this;
     }
 
-    public Client ConfigureInput(Action<InputConfiguration> configure)
+    public Client Configure(Action<Configuration> configure)
     {
-        configure(_inputConfiguration);
+        configure(_configuration);
         return this;
     }
 
@@ -162,7 +162,12 @@ public sealed class Client
             args = regex.Replace(args, m => string.Empty);
 
             var controller = match.Groups["Controller"].Value;
+            if (_configuration.RequireControllerName && string.IsNullOrEmpty(controller))
+                throw new ApplicationException("Must provide a valid controller name");
+
             var action = match.Groups["Action"].Value;
+            if (_configuration.RequireActionName && string.IsNullOrEmpty(action))
+                throw new ApplicationException("Must provide a valid action name");
 
             var filtered = _registrations.ToList(); // Effectively make a copy of the registrations list
 

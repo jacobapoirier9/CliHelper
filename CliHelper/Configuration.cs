@@ -1,6 +1,6 @@
 ﻿namespace CliHelper;
 
-public class InputConfiguration
+public class Configuration
 {
     public bool RequireControllerName { get; set; }
 
