@@ -100,17 +100,33 @@ public sealed class Client
 
     public Client Run(string[] args)
     {
-        var argsAsString = string.Join(' ', args);
-        CoreRun<object>(argsAsString);
-        return this;
-    }
-
-    private T CoreRun<T>(string args)
-    {
         // TODO: Should we need a null check here?
         if (_serviceProvider is null)
             _serviceProvider = _serviceCollection.BuildServiceProvider();
 
+        if (args.Any())
+            HandleCommandExecution<object>(args);
+        else
+            HandleCommandShell();
+
+        return this;
+    }
+
+    private void HandleCommandShell()
+    {
+        do
+        {
+            Console.WriteLine(" > ");
+            var args = Console.ReadLine();
+
+            var argsAsString = string.Join(' ', args);
+            HandleCommandExecution<object>(argsAsString);
+        } while (true);
+    }
+
+    private T HandleCommandExecution<T>(string[] args) => HandleCommandExecution<T>(string.Join(' ', args));
+    private T HandleCommandExecution<T>(string args)
+    {
         var registration = ExtractRegistration(ref args);
         var instance = _serviceProvider.GetRequiredService(registration.Type);
 
@@ -183,9 +199,6 @@ public sealed class Client
     /// </summary>
     internal object ExtractStronglyTypedInstance(Type targetType, ref string args)
     {
-        if (_serviceProvider is null)
-            _serviceProvider = _serviceCollection.BuildServiceProvider();
-
         var instance = _serviceProvider.GetService(targetType) ?? Activator.CreateInstance(targetType);
         foreach (var property in targetType.GetProperties())
         {
@@ -205,9 +218,6 @@ public sealed class Client
     /// <summary>
     /// Returns an array of parameters that should be passed to the <see cref="MethodInfo"/>, which is determined in a previous step.
     /// </summary>
-    /// <param name="method"></param>
-    /// <param name="args"></param>
-    /// <returns></returns>
     internal object[] ExtractMethodParameters(MethodInfo method, ref string args)
     {
         var parameters = method.GetParameters();
