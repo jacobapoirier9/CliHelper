@@ -7,7 +7,7 @@ internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { };
+        args = new string[] { "help" };
 
         var client = Client.Create()
             .AddControllers()
