@@ -1,15 +1,19 @@
 ﻿using CliHelper;
+using System;
+using System.Diagnostics;
+using System.Reflection.PortableExecutable;
 
 internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] {  };
+        args = new string[] { };
 
         var client = Client.Create()
             .AddControllers()
             .Configure(options =>
             {
+                options.InteractiveShellPrompt = "";
             })
             .Run(args);
     }

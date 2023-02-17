@@ -10,4 +10,10 @@ public class Configuration
     /// By default, if an empty args[] is passed to the application, it will enter an interactive shell. This option allows you to throw an exception instead.
     /// </summary>
     public bool DisableInteractiveShell { get; set; }
+
+    /// <summary>
+    /// Shell prompt
+    /// https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/prompt
+    /// </summary>
+    public string InteractiveShellPrompt { get; set; }
 }

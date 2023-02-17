@@ -27,7 +27,8 @@ public sealed class Client
         {
             RequireControllerName = false,
             RequireActionName = false,
-            DisableInteractiveShell = false
+            DisableInteractiveShell = false,
+            InteractiveShellPrompt = " > "
         };
         _serviceCollection = new ServiceCollection();
     }
@@ -120,11 +121,10 @@ public sealed class Client
 
         do
         {
-            Console.Write(" > ");
-            var args = Console.ReadLine();
+            Console.Write(_configuration.InteractiveShellPrompt);
 
-            var argsAsString = string.Join(' ', args);
-            HandleCommandExecution<object>(argsAsString);
+            var args = Console.ReadLine();
+            HandleCommandExecution<object>(args);
         } while (true);
     }
 
