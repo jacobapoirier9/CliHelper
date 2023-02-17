@@ -1,39 +1,36 @@
 ﻿using CliHelper;
-using System.ComponentModel.DataAnnotations;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
+using System;
+using System.Diagnostics;
+using System.Reflection.PortableExecutable;
 
 internal static class Program
 {
     private static void Main(string[] args)
     {
-        args = new string[] { };
+        args = new string[] { "help" };
 
-        var client = CliClient.Create()
+        var client = Client.Create()
             .AddControllers()
-            .AddServices(services =>
+            .Configure(options =>
             {
+                options.InteractiveShellBanner = "Welcome to interactive shell";
             })
             .Run(args);
-
     }
-
 }
 
-[Cli("advanced")]
-public class AdvancedController : Controller
+public class ControllerOne : Controller
 {
-    [Cli("index")]
-    public void Index(string name, int age)
+    public void IndexOne()
     {
-        Console.WriteLine("Here!");
+        Console.WriteLine("one");
     }
 }
 
-public class Test
+public class ControllerTwo : Controller
 {
-    public string Name { get; set; }
-    public int Age { get; set; }
-
+    public void IndexTwo()
+    {
+        Console.WriteLine("two");
+    }
 }
