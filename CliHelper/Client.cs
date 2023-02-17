@@ -152,7 +152,7 @@ public sealed class Client
             return (T)output;
     }
 
-    internal CommandContext ExtractCommandContext(ref string args)
+    private CommandContext ExtractCommandContext(ref string args)
     {
         var registeredTypes = _commandContexts.Select(r => r.TypeAttribute?.Alias ?? r.Type.Name).OrderByDescending(r => r.Length).ToList();
         var registeredMethods = _commandContexts.Select(r => r.MethodAttribute?.Alias ?? r.Method.Name).OrderByDescending(r => r.Length).ToList();
@@ -195,7 +195,7 @@ public sealed class Client
     /// <summary>
     /// If <paramref name="targetType"/> has a special implementation defined in this library, it will return an instance. Otherwise, it will return null.
     /// </summary>
-    internal object ExtractSpecialInstance(Type targetType)
+    private object ExtractSpecialInstance(Type targetType)
     {
         if (targetType == typeof(TextReader))
             return Console.In;
@@ -207,7 +207,7 @@ public sealed class Client
     /// <summary>
     /// If the service collection contains an item of type <paramref name="targetType"/>, it will return the instance. Otherwise, it will return an instance using the default constructor.
     /// </summary>
-    internal object ExtractStronglyTypedInstance(Type targetType, ref string args)
+    private object ExtractStronglyTypedInstance(Type targetType, ref string args)
     {
         var instance = _serviceProvider.GetService(targetType) ?? Activator.CreateInstance(targetType);
         foreach (var property in targetType.GetProperties())
@@ -228,7 +228,7 @@ public sealed class Client
     /// <summary>
     /// Returns an array of parameters that should be passed to the <see cref="MethodInfo"/>, which is determined in a previous step.
     /// </summary>
-    internal object[] ExtractMethodParameters(MethodInfo method, ref string args)
+    private object[] ExtractMethodParameters(MethodInfo method, ref string args)
     {
         var parameters = method.GetParameters();
         var result = new object[parameters.Length];
@@ -254,7 +254,7 @@ public sealed class Client
     /// <summary>
     /// Uses regex to parse through <paramref name="args"/> for key/value pair <paramref name="targetName"/> and converts the result to <paramref name="targetType"/>
     /// </summary>
-    internal object ExtractSimpleTypeInstance(string targetName, Type targetType, ref string args)
+    private object ExtractSimpleTypeInstance(string targetName, Type targetType, ref string args)
     {
         // TODO: Parse Anonymous Parameters?
         // Boolean Regex:       (?<Prefix>--|\/)(?<ArgumentName>[\w-]*)(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>false|true|yes|no|y|n)?|$)
