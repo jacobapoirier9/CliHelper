@@ -23,6 +23,10 @@ public sealed class Client
     private readonly IServiceCollection _serviceCollection = new ServiceCollection();
     private IServiceProvider _serviceProvider;
 
+    /// <summary>
+    /// Initializes a new <see cref="Client"/>.
+    /// </summary>
+    /// <returns></returns>
     public static Client Create()
     {
         var client = new Client();
@@ -32,8 +36,6 @@ public sealed class Client
     /// <summary>
     /// Searches <paramref name="assembly"/> for all types that inherit <see cref="Controller"/> and adds to the command collection.
     /// </summary>
-    /// <param name="assembly">Target assembly to search</param>
-    /// <returns></returns>
     public Client AddControllers(Assembly assembly = null)
     {
         if (assembly is null)
@@ -48,7 +50,6 @@ public sealed class Client
     /// <summary>
     /// Adds all types in <paramref name="types"/> to the command collection.
     /// </summary>
-    /// <param name="types"></param>
     public Client AddControllers(params Type[] types)
     {
         foreach (var type in types)
@@ -75,18 +76,29 @@ public sealed class Client
         return this;
     }
 
+    /// <summary>
+    /// Adjust default configuration settings.
+    /// </summary>
     public Client Configure(Action<IConfiguration> configure)
     {
         configure(_configuration);
         return this;
     }
 
+    /// <summary>
+    /// Add custom services to the <see cref="IServiceCollection"/>.
+    /// </summary>
+    /// <param name="configureServices"></param>
+    /// <returns></returns>
     public Client AddServices(Action<IServiceCollection> configureServices)
     {
         configureServices(_serviceCollection);
         return this;
     }
 
+    /// <summary>
+    /// Start the client with arguments from the command line.
+    /// </summary>
     public Client Run(string[] args)
     {
         AddControllers(typeof(DefaultController));
