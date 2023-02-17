@@ -105,9 +105,7 @@ public sealed class Client
         _serviceCollection.AddSingleton(_registrations);
         RegisterType(typeof(DefaultController));
 
-        // TODO: Should we need a null check here?
-        if (_serviceProvider is null)
-            _serviceProvider = _serviceCollection.BuildServiceProvider();
+        _serviceProvider = _serviceCollection.BuildServiceProvider();
 
         if (args.Any())
             HandleCommandExecution<object>(args);
