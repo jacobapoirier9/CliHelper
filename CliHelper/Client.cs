@@ -195,9 +195,6 @@ public sealed class Client
             if (value is null)
                 value = ExtractSpecialInstance(property.PropertyType);
 
-            if (value is null)
-                value = ExtractInstance(property.PropertyType, ref args);
-
             if (value is not null)
                 property.SetValue(instance, value);
         }
@@ -249,7 +246,7 @@ public sealed class Client
         // Option 2 is to use values such as Y/N to set to true/false accordingly.
         if (targetType == typeof(bool) || targetType == typeof(bool?))
         {
-            var booleanValues = _trueStringValues.Concat(_falseStringValues).OrderBy(s => s.Length).ToList();
+            var booleanValues = _trueStringValues.Concat(_falseStringValues).OrderByDescending(s => s.Length).ToList();
             var regex = new Regex($@"(?<Prefix>--|\/)(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>{string.Join('|', booleanValues)})?|$)", RegexOptions.IgnoreCase);
             var match = regex.Match(args);
 
@@ -319,7 +316,7 @@ public sealed class Client
             else if (_falseStringValues.Contains(lower))
                 converted = false;
             else
-                throw new InvalidCastException($"Could not convert {stringValue} to {targetType}");
+                return Activator.CreateInstance(targetType);
         }
 
         else if (targetType == typeof(byte))

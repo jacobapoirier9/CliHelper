@@ -34,7 +34,7 @@ public class ClientArgumentBinderTests
     {
         var request = ParseRequest();
 
-        Assert.False(request.ImplicitTrue);
+        Assert.True(request.ImplicitTrue);
         Assert.False(request.ImplicitFalse);
         Assert.Null(request.ImplicitNull);
         Assert.True(request.ExplicitTrue);
