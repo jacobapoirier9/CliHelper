@@ -132,6 +132,9 @@ public sealed class Client
         {
             var selectedCommandContextProperty = typeof(Controller).GetProperty(nameof(Controller.SelectedCommandContext));
             selectedCommandContextProperty.SetValue(instance, commandContext);
+
+            var configurationProperty = typeof(Controller).GetProperty(nameof(Controller.Configuration));
+            configurationProperty.SetValue(instance, _configuration);
         }
 
         var parameters = ExtractMethodParameters(commandContext.Method, ref args);
@@ -274,7 +277,7 @@ public sealed class Client
     /// Converts <paramref name="stringValue"/> to <paramref name="targetType"/>.
     /// </summary>
     /// <exception cref="InvalidCastException"></exception>
-    private static object MasterConvertSimpleType(Type targetType, string stringValue)
+    internal static object MasterConvertSimpleType(Type targetType, string stringValue)
     {
         var converted = default(object);
 
