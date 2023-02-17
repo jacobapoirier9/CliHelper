@@ -132,6 +132,9 @@ public sealed class Client
         var commandContext = ExtractCommandContext(ref args);
         var instance = _serviceProvider.GetRequiredService(commandContext.Type);
 
+        var selectedCommandContextProperty = typeof(Controller).GetProperty(nameof(Controller.SelectedCommandContext));
+        selectedCommandContextProperty.SetValue(instance, commandContext);
+        
         var parameters = ExtractMethodParameters(commandContext.Method, ref args);
         var output = commandContext.Method.Invoke(instance, parameters);
 
