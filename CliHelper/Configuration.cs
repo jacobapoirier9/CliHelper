@@ -12,4 +12,6 @@ public sealed class Configuration : IConfiguration
 
     public string InteractiveShellBanner { get; set; }
 
+    public Action<Exception> InteractiveShellHandleErrors { get; set; }
+
 }

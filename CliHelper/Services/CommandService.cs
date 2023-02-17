@@ -41,7 +41,10 @@ public class CommandService : ICommandService
             }
             catch (Exception ex) // TODO: allows clients to handle the exception thrown here?
             {
-                Console.WriteLine("Invalid command");
+                if (_configuration.InteractiveShellHandleErrors is null)
+                    Console.WriteLine("Invalid command");
+                else
+                    _configuration.InteractiveShellHandleErrors(ex);
             }
         } while (true);
     }

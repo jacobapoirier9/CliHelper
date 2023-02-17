@@ -14,7 +14,8 @@ public sealed class Client
         RequireActionName = false,
         DisableInteractiveShell = false,
         InteractiveShellPrompt = " > ",
-        InteractiveShellBanner = null
+        InteractiveShellBanner = null,
+        InteractiveShellHandleErrors = null
     };
 
     private readonly List<CommandContext> _commandContexts = new List<CommandContext>();

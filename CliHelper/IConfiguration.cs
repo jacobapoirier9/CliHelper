@@ -26,4 +26,9 @@ public interface IConfiguration
     /// Adjust the banner shown at the start of a command line session.
     /// </summary>
     public string InteractiveShellBanner { get; set; }
+
+    /// <summary>
+    /// What should happen if an exception is thrown during an interactive shell session.
+    /// </summary>
+    public Action<Exception> InteractiveShellHandleErrors { get; set; }
 }
