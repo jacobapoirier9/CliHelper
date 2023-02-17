@@ -6,7 +6,7 @@ namespace CliHelper;
 
 public sealed class Client
 {
-    private readonly List<Registration> _registrations;
+    private readonly List<CommandContext> _commandContexts;
 
     private bool _hadAddedControllers;
     private readonly Configuration _configuration;
@@ -16,7 +16,7 @@ public sealed class Client
 
     private Client()
     {
-        _registrations = new List<Registration>();
+        _commandContexts = new List<CommandContext>();
         _configuration = new Configuration()
         {
             RequireControllerName = false,
@@ -38,7 +38,7 @@ public sealed class Client
         {
             var methodAttribute = method.GetCustomAttribute<CliAttribute>();
 
-            var registration = new Registration
+            var commandContext = new CommandContext
             {
                 Type = type,
                 TypeAttribute = typeAttribute,
@@ -46,7 +46,7 @@ public sealed class Client
                 MethodAttribute = methodAttribute
             };
 
-            _registrations.Add(registration);
+            _commandContexts.Add(commandContext);
             _serviceCollection.AddTransient(type);
         }
     }
@@ -96,7 +96,7 @@ public sealed class Client
 
     public Client Run(string[] args)
     {
-        _serviceCollection.AddSingleton(_registrations);
+        _serviceCollection.AddSingleton(_commandContexts);
         RegisterType(typeof(DefaultController));
 
         _serviceProvider = _serviceCollection.BuildServiceProvider();
@@ -129,11 +129,11 @@ public sealed class Client
     private T HandleCommandExecution<T>(string[] args) => HandleCommandExecution<T>(string.Join(' ', args));
     private T HandleCommandExecution<T>(string args)
     {
-        var registration = ExtractRegistration(ref args);
-        var instance = _serviceProvider.GetRequiredService(registration.Type);
+        var commandContext = ExtractCommandContext(ref args);
+        var instance = _serviceProvider.GetRequiredService(commandContext.Type);
 
-        var parameters = ExtractMethodParameters(registration.Method, ref args);
-        var output = registration.Method.Invoke(instance, parameters);
+        var parameters = ExtractMethodParameters(commandContext.Method, ref args);
+        var output = commandContext.Method.Invoke(instance, parameters);
 
         if (output is Task emptyTask)
         {
@@ -149,10 +149,10 @@ public sealed class Client
             return (T)output;
     }
 
-    internal Registration ExtractRegistration(ref string args)
+    internal CommandContext ExtractCommandContext(ref string args)
     {
-        var registeredTypes = _registrations.Select(r => r.TypeAttribute?.Alias ?? r.Type.Name).OrderByDescending(r => r.Length).ToList();
-        var registeredMethods = _registrations.Select(r => r.MethodAttribute?.Alias ?? r.Method.Name).OrderByDescending(r => r.Length).ToList();
+        var registeredTypes = _commandContexts.Select(r => r.TypeAttribute?.Alias ?? r.Type.Name).OrderByDescending(r => r.Length).ToList();
+        var registeredMethods = _commandContexts.Select(r => r.MethodAttribute?.Alias ?? r.Method.Name).OrderByDescending(r => r.Length).ToList();
 
         // TODO: Regex should handle requirements
         // Regex: ^(?<Controller>controller)? *(?<Action>action)? *
@@ -171,7 +171,7 @@ public sealed class Client
             if (_configuration.RequireActionName && string.IsNullOrEmpty(action))
                 throw new ApplicationException("Must provide a valid action name");
 
-            var filtered = _registrations.ToList(); // Effectively make a copy of the registrations list
+            var filtered = _commandContexts.ToList(); // Effectively make a copy of the command contexts list
 
             if (!string.IsNullOrEmpty(controller))
                 filtered = filtered.Where(r => string.Equals(r.TypeAttribute?.Alias ?? r.Type.Name, controller, StringComparison.OrdinalIgnoreCase)).ToList();

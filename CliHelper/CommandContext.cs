@@ -1,7 +1,7 @@
 ﻿using CliHelper;
 using System.Reflection;
 
-public class Registration
+public class CommandContext
 {
     public Type Type { get; set; }
 

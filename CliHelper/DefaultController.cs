@@ -2,38 +2,32 @@
 
 internal class DefaultController : Controller
 {
-    private readonly List<Registration> _registrations;
-    public DefaultController(List<Registration> registrations)
+    private readonly List<CommandContext> _commandContexts;
+    public DefaultController(List<CommandContext> commandContexts)
     {
-        _registrations = registrations;
+        _commandContexts = commandContexts;
     }
 
     [Cli("help")]
     public void Help()
     {
-        var groups = _registrations
+        var groups = _commandContexts
             .Where(r => r.Type != typeof(DefaultController))
             .GroupBy(r => r.Type, r => r)
             .OrderBy(g => g.Key.Name);
 
         foreach (var group in groups)
         {
-            var firstRegistration = _registrations.First(r => r.Type == group.Key);
-            Console.WriteLine(firstRegistration?.TypeAttribute?.Alias ?? firstRegistration.Type.Name);
+            var firstCommandContext = _commandContexts.First(r => r.Type == group.Key);
+            Console.WriteLine(firstCommandContext?.TypeAttribute?.Alias ?? firstCommandContext.Type.Name);
 
-            foreach (var registration in group.OrderBy(r => r.Method.Name))
+            foreach (var commandContext in group.OrderBy(r => r.Method.Name))
             {
                 Console.Write("  ");
-                Console.WriteLine(registration?.MethodAttribute?.Alias ?? registration.Method.Name);
+                Console.WriteLine(commandContext?.MethodAttribute?.Alias ?? commandContext.Method.Name);
             }
 
             Console.WriteLine();
-        }
-
-        var distinctTypes = _registrations.Select(r => r.Type).Distinct().OrderBy(t => t.Name).ToList();
-        foreach (var type in distinctTypes)
-        {
-            var currentRegistrations = _registrations.Where(r => r.Type == type).OrderBy(r => r.Method.Name).ToList();
         }
     }
 }
