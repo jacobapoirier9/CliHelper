@@ -6,13 +6,13 @@ namespace CliHelper.Services;
 public class ArgumentService : IArgumentService
 {
     private readonly List<CommandContext> _commandContexts;
-    private readonly Configuration _configuration;
+    private readonly IConfiguration _configuration;
     private readonly IServiceProvider _serviceProvider;
 
     private static readonly string[] _trueStringValues = new string[] { "true", "yes", "y", "1" };
     private static readonly string[] _falseStringValues = new string[] { "false", "no", "n", "0" };
 
-    public ArgumentService(List<CommandContext> commandContexts, Configuration configuration, IServiceProvider serviceProvider)
+    public ArgumentService(List<CommandContext> commandContexts, IConfiguration configuration, IServiceProvider serviceProvider)
     {
         _commandContexts = commandContexts;
         _configuration = configuration;

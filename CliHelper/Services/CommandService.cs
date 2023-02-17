@@ -5,10 +5,10 @@ namespace CliHelper;
 
 public class CommandService : ICommandService
 {
-    private Configuration _configuration;
+    private IConfiguration _configuration;
     private IServiceProvider _serviceProvider;
 
-    public CommandService(Configuration configuration, IServiceProvider serviceProvider)
+    public CommandService(IConfiguration configuration, IServiceProvider serviceProvider)
     {
         _configuration = configuration;
         _serviceProvider = serviceProvider;

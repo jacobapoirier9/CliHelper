@@ -8,32 +8,25 @@ namespace CliHelper;
 
 public sealed class Client
 {
-    private readonly Configuration _configuration;
+    private readonly IConfiguration _configuration = new Configuration()
+    {
+        RequireControllerName = false,
+        RequireActionName = false,
+        DisableInteractiveShell = false,
+        InteractiveShellPrompt = " > ",
+        InteractiveShellBanner = null
+    };
 
     private readonly List<CommandContext> _commandContexts = new List<CommandContext>();
 
-    private readonly IServiceCollection _serviceCollection;
+    private readonly IServiceCollection _serviceCollection = new ServiceCollection();
     private IServiceProvider _serviceProvider;
-
-    #region Client Building
-    private Client()
-    {
-        _configuration = new Configuration()
-        {
-            RequireControllerName = false,
-            RequireActionName = false,
-            DisableInteractiveShell = false,
-            InteractiveShellPrompt = " > "
-        };
-        _serviceCollection = new ServiceCollection();
-    }
 
     public static Client Create()
     {
         var client = new Client();
         return client;
     }
-    #endregion
 
     #region Adding Command Controllers/Modules
     /// <summary>
@@ -83,7 +76,7 @@ public sealed class Client
     }
     #endregion
 
-    public Client Configure(Action<Configuration> configure)
+    public Client Configure(Action<IConfiguration> configure)
     {
         configure(_configuration);
         return this;
