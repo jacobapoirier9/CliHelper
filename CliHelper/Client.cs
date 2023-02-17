@@ -1,5 +1,4 @@
-﻿using CliHelper.Services;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel.Design;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -10,14 +9,10 @@ public sealed class Client
 {
     private readonly Configuration _configuration;
 
+    private readonly List<CommandContext> _commandContexts = new List<CommandContext>();
+
     private readonly IServiceCollection _serviceCollection;
     private IServiceProvider _serviceProvider;
-
-    // TEMP
-    // Could this be added as an item registration?
-    private readonly ICommandContextProvider _commandContextProvider = new CommandContextProvider();
-
-    // ENDTEMP
 
     #region Client Building
     private Client()
@@ -30,6 +25,8 @@ public sealed class Client
             InteractiveShellPrompt = " > "
         };
         _serviceCollection = new ServiceCollection();
+
+        _serviceCollection.AddSingleton(_configuration);
     }
 
     public static Client Create()
@@ -65,7 +62,22 @@ public sealed class Client
         foreach (var type in types)
         {
             _serviceCollection.AddTransient(type);
-            _commandContextProvider.RegisterCommandContexts(type);
+
+            var typeAttribute = type.GetCustomAttribute<CliAttribute>();
+            foreach (var method in type.GetMethods().Where(m => m.IsPublic && m.DeclaringType == type && !m.IsSpecialName))
+            {
+                var methodAttribute = method.GetCustomAttribute<CliAttribute>();
+
+                var commandContext = new CommandContext
+                {
+                    Type = type,
+                    TypeAttribute = typeAttribute,
+                    Method = method,
+                    MethodAttribute = methodAttribute
+                };
+
+                _commandContexts.Add(commandContext);
+            }
         }
 
         return this;
@@ -87,7 +99,7 @@ public sealed class Client
     public Client Run(string[] args)
     {
         AddControllers(typeof(DefaultController));
-        _serviceCollection.AddSingleton(_commandContextProvider.CommandContexts);
+        _serviceCollection.AddSingleton(_commandContexts);
         _serviceProvider = _serviceCollection.BuildServiceProvider();
 
         if (args.Any())
@@ -125,7 +137,7 @@ public sealed class Client
     private T HandleCommandExecution<T>(string[] args) => HandleCommandExecution<T>(string.Join(' ', args));
     private T HandleCommandExecution<T>(string args)
     {
-        var commandContext = _commandContextProvider.ExtractCommandContext(ref args, _configuration);
+        var commandContext = ExtractCommandContext(ref args, _configuration);
         var instance = _serviceProvider.GetRequiredService(commandContext.Type);
 
         if (commandContext.Type.IsSubclassOf(typeof(Controller)))
@@ -269,6 +281,46 @@ public sealed class Client
         }
     }
 
+    public CommandContext ExtractCommandContext(ref string args, Configuration configuration = null)
+    {
+        var registeredTypes = _commandContexts.Select(r => r.TypeAttribute?.Alias ?? r.Type.Name).OrderByDescending(r => r.Length).ToList();
+        var registeredMethods = _commandContexts.Select(r => r.MethodAttribute?.Alias ?? r.Method.Name).OrderByDescending(r => r.Length).ToList();
+
+        // TODO: Regex should handle requirements
+        // Regex: ^(?<Controller>controller)? *(?<Action>action)? *
+        var regex = new Regex($"^(?<Controller>{string.Join('|', registeredTypes)})? *(?<Action>{string.Join('|', registeredMethods)})? *", RegexOptions.IgnoreCase);
+        var match = regex.Match(args);
+
+        if (match.Success)
+        {
+            args = regex.Replace(args, m => string.Empty);
+
+            var controller = match.Groups["Controller"].Value;
+            if (configuration.RequireControllerName && string.IsNullOrEmpty(controller))
+                throw new ApplicationException("Must provide a valid controller name");
+
+            var action = match.Groups["Action"].Value;
+            if (configuration.RequireActionName && string.IsNullOrEmpty(action))
+                throw new ApplicationException("Must provide a valid action name");
+
+            var filtered = _commandContexts.ToList(); // Effectively make a copy of the command contexts list
+
+            if (!string.IsNullOrEmpty(controller))
+                filtered = filtered.Where(r => string.Equals(r.TypeAttribute?.Alias ?? r.Type.Name, controller, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (!string.IsNullOrEmpty(action))
+                filtered = filtered.Where(r => string.Equals(r.MethodAttribute?.Alias ?? r.Method.Name, action, StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (!filtered.Any())
+                throw new ApplicationException("Could not find any actions");
+            else if (filtered.Count == 1)
+                return filtered.First();
+            else
+                throw new ApplicationException("Could not find a single action");
+        }
+        else
+            throw new ApplicationException("Could not find any action");
+    }
+
 
     private static readonly string[] _trueStringValues = new string[] { "true", "yes", "y", "1" };
     private static readonly string[] _falseStringValues = new string[] { "false", "no", "n", "0" };
@@ -343,4 +395,15 @@ public sealed class Client
 
         return converted;
     }
+}
+
+
+public interface IArgumentParser
+{
+
+}
+
+public class ArgumentParser : IArgumentParser
+{
+
 }
