@@ -29,7 +29,6 @@ public sealed class Client
         return client;
     }
 
-    #region Adding Command Controllers/Modules
     /// <summary>
     /// Searches <paramref name="assembly"/> for all types that inherit <see cref="Controller"/> and adds to the command collection.
     /// </summary>
@@ -75,7 +74,6 @@ public sealed class Client
 
         return this;
     }
-    #endregion
 
     public Client Configure(Action<IConfiguration> configure)
     {
