@@ -4,31 +4,37 @@ public interface ISettings
 {
     /// <summary>
     /// Throw an exception if a registered action name was not specified in the shell.
+    /// Default is false.
     /// </summary>
     public bool RequireControllerName { get; set; }
 
     /// <summary>
     /// Throw an exception if a registered controller name was not specified in the shell.
+    /// Default is false.
     /// </summary>
     public bool RequireActionName { get; set; }
 
     /// <summary>
-    /// By default, if an empty args[] is passed to the application, it will enter an interactive shell. This option allows you to throw an exception instead.
+    /// Throw an exception instead of entering an interactive shell when an empty args[] is passed.
+    /// Default is false.
     /// </summary>
     public bool DisableInteractiveShell { get; set; }
 
     /// <summary>
     /// Adjust the prompt shown for each command line. <see cref="DisableInteractiveShell"/> must be set to false in order for this to work.
+    /// Default is null.
     /// </summary>
     public string InteractiveShellPrompt { get; set; }
 
     /// <summary>
     /// Adjust the banner shown at the start of a command line session.
+    /// Default is false.
     /// </summary>
     public string InteractiveShellBanner { get; set; }
 
     /// <summary>
     /// What should happen if an exception is thrown during an interactive shell session.
+    /// Default is null.
     /// </summary>
     public Action<Exception> InteractiveShellHandleErrors { get; set; }
 
