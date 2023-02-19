@@ -17,5 +17,6 @@ public sealed class Settings : ISettings
     public string[] ConsiderTrueStrings { get; set; }
 
     public string[] ConsiderFalseStrings { get; set; }
+    public bool InteractiveShellShowHelpOnInvalidCommand { get; set; }
 
 }

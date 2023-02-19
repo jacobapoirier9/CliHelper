@@ -43,4 +43,10 @@ public interface ISettings
     /// Default is { false, no, n, 0 }.
     /// </summary>
     public string[] ConsiderFalseStrings { get; set; }
+
+    /// <summary>
+    /// When an invalid command is entered in an interactive shell, deterime whether or not to automaticaly run the help command.
+    /// Default is true.
+    /// </summary>
+    public bool InteractiveShellShowHelpOnInvalidCommand { get; set; }
 }

@@ -45,6 +45,12 @@ public class CommandService : ICommandService
                     Console.WriteLine("Invalid command");
                 else
                     _settings.InteractiveShellHandleErrors(ex);
+
+                if (_settings.InteractiveShellShowHelpOnInvalidCommand)
+                {
+                    Console.WriteLine();
+                    HandleNonInteractiveShell<object>("help");
+                }
             }
         } while (true);
     }
