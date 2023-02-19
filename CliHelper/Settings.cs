@@ -1,6 +1,6 @@
 ﻿namespace CliHelper;
 
-public sealed class Configuration : IConfiguration
+public sealed class Settings : ISettings
 {
     public bool RequireControllerName { get; set; }
 

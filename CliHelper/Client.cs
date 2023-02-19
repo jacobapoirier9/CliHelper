@@ -8,7 +8,7 @@ namespace CliHelper;
 
 public sealed class Client
 {
-    private readonly IConfiguration _configuration = new Configuration()
+    private readonly ISettings _settings = new Settings()
     {
         RequireControllerName = false,
         RequireActionName = false,
@@ -79,9 +79,9 @@ public sealed class Client
     /// <summary>
     /// Adjust default configuration settings.
     /// </summary>
-    public Client Configure(Action<IConfiguration> configure)
+    public Client Configure(Action<ISettings> configure)
     {
-        configure(_configuration);
+        configure(_settings);
         return this;
     }
 
@@ -103,7 +103,7 @@ public sealed class Client
     {
         AddControllers(typeof(DefaultController));
 
-        _serviceCollection.AddSingleton(_configuration);
+        _serviceCollection.AddSingleton(_settings);
         _serviceCollection.AddSingleton(_commandContexts);
         _serviceCollection.AddSingleton<IArgumentService, ArgumentService>();
         _serviceCollection.AddSingleton<ICommandService, CommandService>();

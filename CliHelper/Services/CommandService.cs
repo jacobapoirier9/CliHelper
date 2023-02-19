@@ -5,12 +5,12 @@ namespace CliHelper;
 
 public class CommandService : ICommandService
 {
-    private IConfiguration _configuration;
+    private ISettings _settings;
     private IServiceProvider _serviceProvider;
 
-    public CommandService(IConfiguration configuration, IServiceProvider serviceProvider)
+    public CommandService(ISettings settings, IServiceProvider serviceProvider)
     {
-        _configuration = configuration;
+        _settings = settings;
         _serviceProvider = serviceProvider;
     }
 
@@ -24,27 +24,27 @@ public class CommandService : ICommandService
 
     public void HandleInteractiveShell()
     {
-        if (_configuration.InteractiveShellBanner is not null)
-            Console.WriteLine(_configuration.InteractiveShellBanner);
+        if (_settings.InteractiveShellBanner is not null)
+            Console.WriteLine(_settings.InteractiveShellBanner);
 
-        if (_configuration.DisableInteractiveShell)
+        if (_settings.DisableInteractiveShell)
             throw new ApplicationException("Interactive shell has been disabled. No arguments were passed to the application.");
 
         do
         {
             try
             {
-                Console.Write(_configuration.InteractiveShellPrompt);
+                Console.Write(_settings.InteractiveShellPrompt);
 
                 var args = Console.ReadLine();
                 HandleNonInteractiveShell<object>(args);
             }
             catch (Exception ex) // TODO: allows clients to handle the exception thrown here?
             {
-                if (_configuration.InteractiveShellHandleErrors is null)
+                if (_settings.InteractiveShellHandleErrors is null)
                     Console.WriteLine("Invalid command");
                 else
-                    _configuration.InteractiveShellHandleErrors(ex);
+                    _settings.InteractiveShellHandleErrors(ex);
             }
         } while (true);
     }
@@ -61,8 +61,8 @@ public class CommandService : ICommandService
             var selectedCommandContextProperty = typeof(Controller).GetProperty(nameof(Controller.SelectedCommandContext));
             selectedCommandContextProperty.SetValue(instance, commandContext);
 
-            var configurationProperty = typeof(Controller).GetProperty(nameof(Controller.Configuration));
-            configurationProperty.SetValue(instance, _configuration);
+            var configurationProperty = typeof(Controller).GetProperty(nameof(Controller.Settings));
+            configurationProperty.SetValue(instance, _settings);
         }
 
         var parameters = argumentParser.ExtractMethodParameters(commandContext.Method, ref args);

@@ -6,16 +6,16 @@ namespace CliHelper.Services;
 public class ArgumentService : IArgumentService
 {
     private readonly List<CommandContext> _commandContexts;
-    private readonly IConfiguration _configuration;
+    private readonly ISettings _settings;
     private readonly IServiceProvider _serviceProvider;
 
     private static readonly string[] _trueStringValues = new string[] { "true", "yes", "y", "1" };
     private static readonly string[] _falseStringValues = new string[] { "false", "no", "n", "0" };
 
-    public ArgumentService(List<CommandContext> commandContexts, IConfiguration configuration, IServiceProvider serviceProvider)
+    public ArgumentService(List<CommandContext> commandContexts, ISettings settings, IServiceProvider serviceProvider)
     {
         _commandContexts = commandContexts;
-        _configuration = configuration;
+        _settings = settings;
         _serviceProvider = serviceProvider;
     }
 
@@ -32,11 +32,11 @@ public class ArgumentService : IArgumentService
             args = regex.Replace(args, m => string.Empty);
 
             var controller = match.Groups["Controller"].Value;
-            if (_configuration.RequireControllerName && string.IsNullOrEmpty(controller))
+            if (_settings.RequireControllerName && string.IsNullOrEmpty(controller))
                 throw new ApplicationException("Must provide a valid controller name");
 
             var action = match.Groups["Action"].Value;
-            if (_configuration.RequireActionName && string.IsNullOrEmpty(action))
+            if (_settings.RequireActionName && string.IsNullOrEmpty(action))
                 throw new ApplicationException("Must provide a valid action name");
 
             var filtered = _commandContexts.ToList();

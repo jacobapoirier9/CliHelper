@@ -10,7 +10,7 @@ public abstract class Controller
 
     public CommandContext SelectedCommandContext { get; internal set; }
 
-    public Configuration Configuration { get; internal set; }
+    public Settings Settings { get; internal set; }
 
     public bool UserChoice(string prompt)
     {
@@ -24,7 +24,7 @@ public abstract class Controller
         do
         {
             Console.WriteLine(prompt);
-            Console.Write(Configuration.InteractiveShellPrompt);
+            Console.Write(Settings.InteractiveShellPrompt);
 
             var input = Console.ReadLine();
 

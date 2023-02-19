@@ -1,6 +1,6 @@
 ﻿namespace CliHelper;
 
-public interface IConfiguration
+public interface ISettings
 {
     /// <summary>
     /// Throw an exception if a registered action name was not specified in the shell.
