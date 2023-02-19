@@ -1,4 +1,4 @@
-﻿namespace CliHelper;
+﻿namespace CliHelper.Services;
 
 public sealed class Settings : ISettings
 {

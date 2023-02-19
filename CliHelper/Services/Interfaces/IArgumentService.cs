@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace CliHelper.Services;
+namespace CliHelper.Services.Interfaces;
 
 public interface IArgumentService
 {
