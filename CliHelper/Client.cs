@@ -19,7 +19,8 @@ public sealed class Client
         InteractiveShellHandleErrors = null,
         ConsiderTrueStrings = new string[] { "true", "yes", "y", "1" },
         ConsiderFalseStrings = new string[] { "false", "no", "n", "0" },
-        InteractiveShellShowHelpOnInvalidCommand = true
+        InteractiveShellShowHelpOnInvalidCommand = true,
+        CommandSwitchPrefixes = new string[] { "--", "/" }
     };
 
     private readonly List<CommandContext> _commandContexts = new List<CommandContext>();

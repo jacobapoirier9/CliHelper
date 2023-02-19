@@ -61,14 +61,16 @@ public class ArgumentService : IArgumentService
         // Boolean Regex:       (?<Prefix>--|\/)(?<ArgumentName>[\w-]*)(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>false|true|yes|no|y|n)?|$)
         // Named Regex:         (?<Prefix>--|\/)(?<ArgumentName>[\w-]*)(?<ArgumentNameTerminator>[\s:=]+)(?<ArgumentValue>[\w:\\.-]+|"[\w\s:\\.-]*"|'[\w\s:\\.-]*')
         // Anonymous Regex:     (?<AnonymousArgument>[\w:\\.-]+|"[\w\s:\\.-]*"|'[\w\s:\\.-]*')
-
         // TODO: How should boolean values be parsed?
         // Option 1 is to use switch presence as an indicator to set to true.
         // Option 2 is to use values such as Y/N to set to true/false accordingly.
+
+        var switchPrefixSubRegexPattern = string.Join('|', _settings.CommandSwitchPrefixes.OrderByDescending(s => s.Length).Select(s => Regex.Escape(s)));
+
         if (targetType == typeof(bool) || targetType == typeof(bool?))
         {
             var booleanValues = _settings.ConsiderTrueStrings.Concat(_settings.ConsiderFalseStrings).OrderByDescending(s => s.Length).ToList();
-            var regex = new Regex($@"(?<Prefix>--|\/)(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>{string.Join('|', booleanValues)})?|$)", RegexOptions.IgnoreCase);
+            var regex = new Regex($@"(?<Prefix>{switchPrefixSubRegexPattern})(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>{string.Join('|', booleanValues)})?|$)", RegexOptions.IgnoreCase);
             var match = regex.Match(args);
 
             // The boolean switch is present.
@@ -91,7 +93,7 @@ public class ArgumentService : IArgumentService
         else
         {
             var validStringValueRegex = @"[\w\s:\\.-{}]";
-            var regex = new Regex($@"(?<Prefix>--|\/)(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+)(?<ArgumentValue>{validStringValueRegex}+|""{validStringValueRegex}*""|'{validStringValueRegex}*')", RegexOptions.IgnoreCase);
+            var regex = new Regex($@"(?<Prefix>{switchPrefixSubRegexPattern})(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+)(?<ArgumentValue>{validStringValueRegex}+|""{validStringValueRegex}*""|'{validStringValueRegex}*')", RegexOptions.IgnoreCase);
             var match = regex.Match(args);
 
             if (match.Success)

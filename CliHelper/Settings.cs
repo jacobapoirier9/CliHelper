@@ -18,5 +18,6 @@ public sealed class Settings : ISettings
 
     public string[] ConsiderFalseStrings { get; set; }
     public bool InteractiveShellShowHelpOnInvalidCommand { get; set; }
+    public string[] CommandSwitchPrefixes { get; set; }
 
 }

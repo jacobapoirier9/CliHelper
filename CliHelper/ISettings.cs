@@ -55,4 +55,10 @@ public interface ISettings
     /// Default is true.
     /// </summary>
     public bool InteractiveShellShowHelpOnInvalidCommand { get; set; }
+
+    /// <summary>
+    /// Strings to use as a prefix to a switch.
+    /// Default is { /, -- }.
+    /// </summary>
+    public string[] CommandSwitchPrefixes { get; set; }
 }
