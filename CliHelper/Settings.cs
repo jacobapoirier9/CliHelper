@@ -14,4 +14,8 @@ public sealed class Settings : ISettings
 
     public Action<Exception> InteractiveShellHandleErrors { get; set; }
 
+    public string[] ConsiderTrueStrings { get; set; }
+
+    public string[] ConsiderFalseStrings { get; set; }
+
 }

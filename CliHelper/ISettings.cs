@@ -31,4 +31,16 @@ public interface ISettings
     /// What should happen if an exception is thrown during an interactive shell session.
     /// </summary>
     public Action<Exception> InteractiveShellHandleErrors { get; set; }
+
+    /// <summary>
+    /// When a boolean type is being parsed, what strings can be used to represent true.
+    /// Default is { true, yes, y, 1 }.
+    /// </summary>
+    public string[] ConsiderTrueStrings { get; set; }
+
+    /// <summary>
+    /// When a boolean type is being parsed, what strings can be used to represent false.
+    /// Default is { false, no, n, 0 }.
+    /// </summary>
+    public string[] ConsiderFalseStrings { get; set; }
 }

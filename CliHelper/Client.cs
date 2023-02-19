@@ -15,7 +15,9 @@ public sealed class Client
         DisableInteractiveShell = false,
         InteractiveShellPrompt = " > ",
         InteractiveShellBanner = null,
-        InteractiveShellHandleErrors = null
+        InteractiveShellHandleErrors = null,
+        ConsiderTrueStrings = new string[] { "true", "yes", "y", "1" },
+        ConsiderFalseStrings = new string[] { "false", "no", "n", "0" }
     };
 
     private readonly List<CommandContext> _commandContexts = new List<CommandContext>();

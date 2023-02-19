@@ -9,9 +9,6 @@ public class ArgumentService : IArgumentService
     private readonly ISettings _settings;
     private readonly IServiceProvider _serviceProvider;
 
-    private static readonly string[] _trueStringValues = new string[] { "true", "yes", "y", "1" };
-    private static readonly string[] _falseStringValues = new string[] { "false", "no", "n", "0" };
-
     public ArgumentService(List<CommandContext> commandContexts, ISettings settings, IServiceProvider serviceProvider)
     {
         _commandContexts = commandContexts;
@@ -69,7 +66,7 @@ public class ArgumentService : IArgumentService
         // Option 2 is to use values such as Y/N to set to true/false accordingly.
         if (targetType == typeof(bool) || targetType == typeof(bool?))
         {
-            var booleanValues = _trueStringValues.Concat(_falseStringValues).OrderByDescending(s => s.Length).ToList();
+            var booleanValues = _settings.ConsiderTrueStrings.Concat(_settings.ConsiderFalseStrings).OrderByDescending(s => s.Length).ToList();
             var regex = new Regex($@"(?<Prefix>--|\/)(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+(?<ArgumentValue>{string.Join('|', booleanValues)})?|$)", RegexOptions.IgnoreCase);
             var match = regex.Match(args);
 
@@ -159,12 +156,7 @@ public class ArgumentService : IArgumentService
 
         return result;
     }
-
-    /// <summary>
-    /// Converts <paramref name="stringValue"/> to <paramref name="targetType"/>.
-    /// </summary>
-    /// <exception cref="InvalidCastException"></exception>
-    public static object MasterConvertSimpleType(Type targetType, string stringValue)
+    public object MasterConvertSimpleType(Type targetType, string stringValue)
     {
         var converted = default(object);
 
@@ -175,9 +167,9 @@ public class ArgumentService : IArgumentService
         {
             var lower = stringValue.ToLower();
 
-            if (_trueStringValues.Contains(lower))
+            if (_settings.ConsiderTrueStrings.Contains(lower))
                 converted = true;
-            else if (_falseStringValues.Contains(lower))
+            else if (_settings.ConsiderFalseStrings.Contains(lower))
                 converted = false;
             else
                 return Activator.CreateInstance(targetType);
