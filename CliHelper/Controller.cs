@@ -10,7 +10,7 @@ public abstract class Controller
 
     public CommandContext SelectedCommandContext { get; internal set; }
 
-    public Settings Settings { get; internal set; }
+    public ISettings Settings { get; internal set; }
 
     public bool UserChoice(string prompt)
     {
