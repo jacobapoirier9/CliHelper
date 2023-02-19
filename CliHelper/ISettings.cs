@@ -22,7 +22,7 @@ public interface ISettings
 
     /// <summary>
     /// Adjust the prompt shown for each command line. <see cref="DisableInteractiveShell"/> must be set to false in order for this to work.
-    /// Default is null.
+    /// Default is " > ".
     /// </summary>
     public string InteractiveShellPrompt { get; set; }
 
