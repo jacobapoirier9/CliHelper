@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace CliHelper.Services;
+namespace CliHelper.Services.Interfaces;
 
 public interface IArgumentService
 {
@@ -31,4 +31,11 @@ public interface IArgumentService
     /// Use regex to parse <paramref name="args"/> to create a <see cref="object[]"/> used to invoke <paramref name="method"/>.
     /// </summary>
     public object[] ExtractMethodParameters(MethodInfo method, ref string args);
+
+
+    /// <summary>
+    /// Converts <paramref name="stringValue"/> to <paramref name="targetType"/>.
+    /// </summary>
+    /// <exception cref="InvalidCastException"></exception>
+    public object MasterConvertSimpleType(Type targetType, string stringValue);
 }

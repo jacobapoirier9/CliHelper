@@ -1,6 +1,6 @@
-﻿namespace CliHelper;
+﻿namespace CliHelper.Services;
 
-public sealed class Configuration : IConfiguration
+public sealed class Settings : ISettings
 {
     public bool RequireControllerName { get; set; }
 
@@ -13,5 +13,11 @@ public sealed class Configuration : IConfiguration
     public string InteractiveShellBanner { get; set; }
 
     public Action<Exception> InteractiveShellHandleErrors { get; set; }
+
+    public string[] ConsiderTrueStrings { get; set; }
+
+    public string[] ConsiderFalseStrings { get; set; }
+    public bool InteractiveShellShowHelpOnInvalidCommand { get; set; }
+    public string[] CommandSwitchPrefixes { get; set; }
 
 }

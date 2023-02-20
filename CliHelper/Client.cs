@@ -1,4 +1,5 @@
 ﻿using CliHelper.Services;
+using CliHelper.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.ComponentModel.Design;
@@ -8,14 +9,18 @@ namespace CliHelper;
 
 public sealed class Client
 {
-    private readonly IConfiguration _configuration = new Configuration()
+    private readonly ISettings _settings = new Settings()
     {
         RequireControllerName = false,
         RequireActionName = false,
         DisableInteractiveShell = false,
         InteractiveShellPrompt = " > ",
         InteractiveShellBanner = null,
-        InteractiveShellHandleErrors = null
+        InteractiveShellHandleErrors = null,
+        ConsiderTrueStrings = new string[] { "true", "yes", "y", "1" },
+        ConsiderFalseStrings = new string[] { "false", "no", "n", "0" },
+        InteractiveShellShowHelpOnInvalidCommand = true,
+        CommandSwitchPrefixes = new string[] { "--", "/" }
     };
 
     private readonly List<CommandContext> _commandContexts = new List<CommandContext>();
@@ -79,9 +84,9 @@ public sealed class Client
     /// <summary>
     /// Adjust default configuration settings.
     /// </summary>
-    public Client Configure(Action<IConfiguration> configure)
+    public Client Configure(Action<ISettings> configure)
     {
-        configure(_configuration);
+        configure(_settings);
         return this;
     }
 
@@ -103,7 +108,7 @@ public sealed class Client
     {
         AddControllers(typeof(DefaultController));
 
-        _serviceCollection.AddSingleton(_configuration);
+        _serviceCollection.AddSingleton(_settings);
         _serviceCollection.AddSingleton(_commandContexts);
         _serviceCollection.AddSingleton<IArgumentService, ArgumentService>();
         _serviceCollection.AddSingleton<ICommandService, CommandService>();

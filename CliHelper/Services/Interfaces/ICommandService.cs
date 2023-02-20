@@ -1,4 +1,4 @@
-﻿namespace CliHelper;
+﻿namespace CliHelper.Services.Interfaces;
 
 public interface ICommandService
 {

@@ -14,6 +14,7 @@ internal static class Program
             .AddControllers(typeof(ControllerOne))
             .Configure(options =>
             {
+                
             })
             .Run(args);
     }
@@ -21,7 +22,7 @@ internal static class Program
 
 public class ControllerOne
 {
-    public void IndexOne()
+    public void IndexOne(string name)
     {
         Console.WriteLine("one");
     }
