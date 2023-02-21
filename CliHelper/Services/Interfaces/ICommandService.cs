@@ -11,4 +11,9 @@ public interface ICommandService
     /// Execute a single command from the command line.
     /// </summary>
     public T RunCommand<T>(string args);
+
+    /// <summary>
+    /// Execute a single command from the command line.
+    /// </summary>
+    public object RunCommand(string args) => RunCommand<object>(args);
 }
