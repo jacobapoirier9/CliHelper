@@ -118,9 +118,9 @@ public sealed class Client
         var argsString = string.Join(' ', args);
         var shellService = _serviceProvider.GetRequiredService<ICommandService>();
         if (string.IsNullOrEmpty(argsString))
-            shellService.HandleInteractiveShell();
+            shellService.RunInteractiveShell();
         else
-            shellService.HandleNonInteractiveShell<object>(argsString);
+            shellService.RunCommand<object>(argsString);
 
         return this;
     }

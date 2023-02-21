@@ -14,7 +14,7 @@ public class CommandService : ICommandService
         _serviceProvider = serviceProvider;
     }
 
-    public void HandleInteractiveShell()
+    public void RunInteractiveShell()
     {
         if (_settings.InteractiveShellBanner is not null)
             Console.WriteLine(_settings.InteractiveShellBanner);
@@ -29,7 +29,7 @@ public class CommandService : ICommandService
                 Console.Write(_settings.InteractiveShellPrompt);
 
                 var args = Console.ReadLine();
-                HandleNonInteractiveShell<object>(args);
+                RunCommand<object>(args);
             }
             catch (Exception ex) // TODO: allows clients to handle the exception thrown here?
             {
@@ -41,13 +41,13 @@ public class CommandService : ICommandService
                 if (_settings.InteractiveShellShowHelpOnInvalidCommand)
                 {
                     Console.WriteLine();
-                    HandleNonInteractiveShell<object>("help");
+                    RunCommand<object>("help");
                 }
             }
         } while (true);
     }
 
-    public T HandleNonInteractiveShell<T>(string args)
+    public T RunCommand<T>(string args)
     {
         var argumentParser = _serviceProvider.GetRequiredService<IArgumentService>();
 
