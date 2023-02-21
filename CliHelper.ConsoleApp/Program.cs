@@ -22,7 +22,7 @@ internal static class Program
 
 public class ControllerOne
 {
-    public void IndexOne(string name)
+    public void IndexOne(FileInfo file)
     {
         Console.WriteLine("one");
     }
