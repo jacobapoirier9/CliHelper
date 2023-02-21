@@ -115,8 +115,12 @@ public sealed class Client
 
         _serviceProvider = _serviceCollection.BuildServiceProvider();
 
+        var argsString = string.Join(' ', args);
         var shellService = _serviceProvider.GetRequiredService<ICommandService>();
-        shellService.HandleInputString(string.Join(' ', args));
+        if (string.IsNullOrEmpty(argsString))
+            shellService.HandleInteractiveShell();
+        else
+            shellService.HandleNonInteractiveShell<object>(argsString);
 
         return this;
     }

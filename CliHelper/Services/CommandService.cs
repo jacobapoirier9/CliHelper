@@ -14,14 +14,6 @@ public class CommandService : ICommandService
         _serviceProvider = serviceProvider;
     }
 
-    public void HandleInputString(string args)
-    {
-        if (string.IsNullOrEmpty(args))
-            HandleInteractiveShell();
-        else
-            HandleNonInteractiveShell<object>(args);
-    }
-
     public void HandleInteractiveShell()
     {
         if (_settings.InteractiveShellBanner is not null)
