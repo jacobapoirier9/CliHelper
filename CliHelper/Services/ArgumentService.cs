@@ -90,7 +90,16 @@ public class ArgumentService : IArgumentService
             else
                 return null;
         }
-        else
+        else if (targetType == typeof(string)
+                || targetType == typeof(byte) || targetType == typeof(byte?)
+                || targetType == typeof(short) || targetType == typeof(short?)
+                || targetType == typeof(int) || targetType == typeof(int?)
+                || targetType == typeof(long) || targetType == typeof(long?)
+                || targetType == typeof(double) || targetType == typeof(double?)
+                || targetType == typeof(float) || targetType == typeof(float?)
+                || targetType == typeof(decimal) || targetType == typeof(decimal?)
+                || targetType == typeof(TimeSpan) || targetType == typeof(TimeSpan?)
+                || targetType == typeof(DateTime) || targetType == typeof(DateTime?))
         {
             var validStringValueRegex = @"[\w\s:\\.-{}]";
             var regex = new Regex($@"(?<Prefix>{switchPrefixSubRegexPattern})(?<ArgumentName>{targetName})(?<ArgumentNameTerminator>[\s:=]+)(?<ArgumentValue>{validStringValueRegex}+|""{validStringValueRegex}*""|'{validStringValueRegex}*')", RegexOptions.IgnoreCase);
@@ -108,12 +117,31 @@ public class ArgumentService : IArgumentService
 
             return null;
         }
+        else
+            return null;
     }
 
-    public object ExtractSpecialInstance(Type targetType)
+    public object ExtractSpecialInstance(Type targetType, string targetName, ref string args)
     {
         if (targetType == typeof(TextReader))
             return Console.In;
+
+        else if (targetType == typeof(FileInfo))
+        {
+            var path = (string)ExtractSimpleTypeInstance(typeof(string), targetName, ref args);
+            if (File.Exists(path))
+                return new FileInfo(path);
+            else
+                throw new FileNotFoundException("Unable to find file", path);
+        }
+        else if (targetType == typeof(DirectoryInfo))
+        {
+            var path = (string)ExtractSimpleTypeInstance(typeof(string), targetName, ref args);
+            if (Directory.Exists(path))
+                return new DirectoryInfo(path);
+            else
+                throw new DirectoryNotFoundException("Unable to find directory " + path);
+        }
 
         else
             return null;
@@ -128,7 +156,7 @@ public class ArgumentService : IArgumentService
 
             var value = ExtractSimpleTypeInstance(property.PropertyType, attribute?.Alias ?? property.Name, ref args);
             if (value is null)
-                value = ExtractSpecialInstance(property.PropertyType);
+                value = ExtractSpecialInstance(property.PropertyType, attribute?.Alias ?? property.Name, ref args);
 
             if (value is not null)
                 property.SetValue(instance, value);
@@ -149,7 +177,7 @@ public class ArgumentService : IArgumentService
 
             var value = ExtractSimpleTypeInstance(parameter.ParameterType, attribute?.Alias ?? parameter.Name, ref args);
             if (value is null)
-                value = ExtractSpecialInstance(parameter.ParameterType);
+                value = ExtractSpecialInstance(parameter.ParameterType, attribute?.Alias ?? parameter.Name, ref args);
 
             if (value is null)
                 value = ExtractStronglyTypedInstance(parameter.ParameterType, ref args);

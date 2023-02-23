@@ -19,7 +19,7 @@ public interface IArgumentService
     /// <summary>
     /// Returns a custom instance of <paramref name="targetType"/> if supported, otherwise null.
     /// </summary>
-    public object ExtractSpecialInstance(Type targetType);
+    public object ExtractSpecialInstance(Type targetType, string targetName, ref string args);
 
     /// <summary>
     /// Use regex to parse <paramref name="args"/> for each property on <paramref name="targetType"/> and returns the result.
